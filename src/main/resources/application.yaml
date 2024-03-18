@@ -1,1 +1,10 @@
-spring.application.name=daq_monitoring_sw
+server:
+#  host: 192.168.0.75 # 서버 호스트 주소
+  host: 218.154.246.10 # 서버 호스트 주소
+  port: 8383         # 서버 포트 번호
+
+  netty:
+    boss-count: 1    # Netty boss 쓰레드 개수
+    worker-count: 4  # Netty worker 쓰레드 개수
+    keep-alive: true # TCP keep-alive 설정
+    backlog: 100     # TCP backlog 설정

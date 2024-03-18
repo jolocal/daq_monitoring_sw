@@ -1,8 +1,9 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
-import com.example.daq_monitoring_sw.tcp.service.DataService;
+import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.AttributeKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -11,15 +12,16 @@ import org.springframework.stereotype.Component;
 /* 클라이언트와의 연결 수립, 데이터 읽기 및 쓰기, 예외처리 등의 로직 */
 @Slf4j
 @Component
-@io.netty.channel.ChannelHandler.Sharable
 @RequiredArgsConstructor
+@io.netty.channel.ChannelHandler.Sharable
 public class ChannelHandler extends ChannelInboundHandlerAdapter {
 
-    private final DataService dataService;
+//    private final DataService dataService;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("Client connected: {}", ctx.channel().remoteAddress());
+
     }
 
     @Override
@@ -30,11 +32,27 @@ public class ChannelHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         log.info("channelRead called");
+        UserRequest user = (UserRequest) ctx.channel().attr(AttributeKey.valueOf("user")).get();
+
         try{
-            String receivedMsg = (String) msg;
+            UserRequest userRequest = (UserRequest) msg;
             // 데이터 처리 로직
             // dataService.(ctx,receivedMessage)
-            log.info("received message: {}", receivedMsg);
+
+            // UserRequest 객체의 내용을 로깅합니다.
+            log.info("UserRequest: {}", userRequest.toString());
+
+            // 추가적으로 UserRequest의 세부 내용을 로그로 출력할 수 있습니다.
+            log.info("DAQ ID: {}", userRequest.getDaqId());
+            log.info("Sensor Count: {}", userRequest.getSensorCnt());
+            log.info("Sensor IDs Order: {}", userRequest.getSensorIdsOrder());
+            if (userRequest.getParsedSensorData() != null) {
+                userRequest.getParsedSensorData().forEach((sensorId, data) ->
+                        log.info("Sensor ID: {}, Data: {}", sensorId, data));
+            }else {
+                // msg가 UserRequest 타입이 아닌 경우의 처리 (필요에 따라)
+                log.warn("Message received is not of type UserRequest: {}", msg.getClass().getSimpleName());
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
