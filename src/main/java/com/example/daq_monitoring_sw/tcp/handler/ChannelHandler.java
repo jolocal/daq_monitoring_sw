@@ -23,6 +23,7 @@ public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
     private final DataService dataService;
     private final ChannelRepository channelRepository;
 
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.info("==================================== Client connected: {} ====================================", ctx.channel().remoteAddress() );
