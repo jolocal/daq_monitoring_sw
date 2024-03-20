@@ -1,5 +1,6 @@
 package com.example.daq_monitoring_sw.tcp.codec;
 
+import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -8,8 +9,9 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+
+import static com.example.daq_monitoring_sw.tcp.codec.ReqDecoder.DAQ_CENTER_KEY;
 
 @Slf4j
 @Component
@@ -22,17 +24,32 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserRequest res, ByteBuf out) throws Exception {
 
+        log.info("encode start res: {}",res);
+
         // 본문 데이터 생성
         ByteBuf body = Unpooled.buffer();
 
-        switch (res.getCommand()) {
-            case RS:
-                String daqId_rs = res.getDaqId();
-                body.writeBytes(daqId_rs.getBytes(StandardCharsets.UTF_8));
+        switch (res.getStatus()) {
+            case WD:
+                String daqId_wd = res.getDaqId();
+                body.writeBytes(daqId_wd.getBytes(StandardCharsets.UTF_8));
 
                 int sensorCnt = res.getSensorCnt();
                 String sensorCntStr = String.format("%02d", sensorCnt);
                 body.writeBytes(sensorCntStr.getBytes(StandardCharsets.UTF_8));
+
+                for (String sensorId: res.getSensorIdsOrder()){
+                    body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
+                }
+                break;
+
+            case RS:
+                String daqId_rs = res.getDaqId();
+                body.writeBytes(daqId_rs.getBytes(StandardCharsets.UTF_8));
+
+                int sensorCnt_rs = res.getSensorCnt();
+                String sensorCnt_rs_str = String.format("%02d", sensorCnt_rs);
+                body.writeBytes(sensorCnt_rs_str.getBytes(StandardCharsets.UTF_8));
 
                 for (String sensorId: res.getSensorIdsOrder()){
                     body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
@@ -57,17 +74,32 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
         }
 
         // 헤더 작성
-        int packetLength = body.readableBytes() + 5; // STX(1) + length(2) + command(2) + ETX(1)
+        int packetLength = body.readableBytes() + 5; // STX(1) + length(2) + status(2) + ETX(1)
         String packetLengthStr = String.format("%02d",packetLength);
 
-        out.writeByte(ProtocolState.STX.getValue()); // STX
+        // stx
+        out.writeByte(ProtocolState.STX.getValue());
         out.writeBytes(packetLengthStr.getBytes(StandardCharsets.UTF_8));
+
+        // command
+        DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        String command = String.valueOf(daqCenter.getStatus());
+        out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
+
+        // body
         out.writeBytes(body);
-        out.writeByte(ProtocolState.ETX.getValue()); // ETX
+
+        // etx
+        out.writeByte(ProtocolState.ETX.getValue());
 
         ctx.writeAndFlush(out);
 
     }
 
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        cause.printStackTrace(); // 예외출력
+        ctx.close(); // 채널 닫기 및 네트워크 리소스 정리
+    }
 
 }

@@ -10,8 +10,11 @@ import java.util.Map;
 @Data
 @AllArgsConstructor
 @Builder
-public class SensorData {
+public class DaqCenter {
+
     private String daqId;
+    private Status status;
+
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
     private Map<String, String> parsedSensorData;
