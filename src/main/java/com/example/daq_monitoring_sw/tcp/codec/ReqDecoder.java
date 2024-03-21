@@ -50,6 +50,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 etx = readLength(in, 1);
 
                 DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+
                 UserRequest userRequest = UserRequest.builder()
                         .status(daqCenter.getStatus())
                         .daqId(daqCenter.getDaqId())

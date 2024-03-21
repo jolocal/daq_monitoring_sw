@@ -1,9 +1,11 @@
 package com.example.daq_monitoring_sw.tcp.service;
 
+import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,8 +21,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class DataService {
 
+    private RedisProperties.Jedis jedis;
+
+
     public void handleStopRequest(ChannelHandlerContext ctx){
 
+    }
+
+    public void writeData(DaqCenter daqCenter) {
     }
 
 /*    private final ClientMappingService clientMappingService;

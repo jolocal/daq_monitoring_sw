@@ -3,6 +3,7 @@ package com.example.daq_monitoring_sw.tcp.handler;
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import com.example.daq_monitoring_sw.tcp.service.DataService;
+import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -22,22 +23,20 @@ public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
 
     private final DataService dataService;
     private final ChannelRepository channelRepository;
+//    private final ChannelRepository channelRepository;
 
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        log.info("==================================== Client connected: {} ====================================", ctx.channel().remoteAddress() );
-        String daqId = String.valueOf(ctx.channel().attr(DAQ_CENTER_KEY).get());
-        channelRepository.addClient(daqId, ctx.channel());
+        log.info("==================================== Client connected: {} ====================================", ctx.channel().remoteAddress());
+        channelRepository.channelActive(ctx);
 
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         log.info("==================================== Client disConnected: {} ====================================", ctx.channel().remoteAddress());
-        String daqId = String.valueOf(ctx.channel().attr(DAQ_CENTER_KEY).get());
-        channelRepository.removeClient(daqId);
-        ctx.close(); // 채널 닫기
+        channelRepository.channelInactive(ctx);
     }
 
 
@@ -57,50 +56,39 @@ public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
         if (daqCenter != null) {
             // DaqCenter 객체 사용
             log.info("저장된 채널 정보:{}", daqCenter.toString());
-        }
 
-        ctx.writeAndFlush(userReq);
 
-        switch (daqCenter.getStatus()){
-            case WD ->  log.info(" Reqeust [{}] start", daqCenter.getStatus());
+            switch (daqCenter.getStatus()) {
+                case IN -> {
+                    return;
+                }
 
-            /* 리스너 등록 */
-            case RQ ->  log.info(" Reqeust [{}] start", daqCenter.getStatus());
-            /* 데이터 구독, 이벤트 발생 */
-            case RD ->  log.info(" Reqeust [{}] start", daqCenter.getStatus());
+                case WD -> {
+                    /* 데이터 PUB */
+                    // daqId:sensorId
+                    log.info(" Reqeust [{}] start", daqCenter.getStatus());
+                    dataService.writeData(daqCenter);
+                }
 
-            case ST -> {
-                log.info(" Reqeust [{}] start", daqCenter.getStatus());
-                dataService.handleStopRequest(ctx);
+                case RQ -> {
+                    /* 데이터 SUB */
+                    log.info(" Reqeust [{}] start", daqCenter.getStatus());
+                }
+
+                case ST -> {
+                    log.info(" Reqeust [{}] start", daqCenter.getStatus());
+                    dataService.handleStopRequest(ctx);
+                }
+
+                default -> throw new IllegalStateException("Unexpected value: " + daqCenter.getStatus());
             }
 
-            default -> throw new IllegalStateException("Unexpected value: "+ daqCenter.getStatus());
+            ctx.writeAndFlush(userReq);
+
+        } else {
+            throw new IllegalStateException("저장된 채널 정보가 없습니다.");
         }
 
-
-      /*  try{
-            UserRequest userRequest = (UserRequest) userReq;
-            // 데이터 처리 로직
-            // dataService.(ctx,receivedMessage)
-            // UserRequest 객체의 내용을 로깅합니다.
-            log.info("UserRequest: {}", userRequest.toString());
-            // 추가적으로 UserRequest의 세부 내용을 로그로 출력할 수 있습니다.
-            log.info("DAQ ID: {}", userRequest.getDaqId());
-            log.info("Sensor Count: {}", userRequest.getSensorCnt());
-            log.info("Sensor IDs Order: {}", userRequest.getSensorIdsOrder());
-            if (userRequest.getParsedSensorData() != null) {
-                userRequest.getParsedSensorData().forEach((sensorId, data) ->
-                        log.info("Sensor ID: {}, Data: {}", sensorId, data));
-            }else {
-                // msg가 UserRequest 타입이 아닌 경우의 처리 (필요에 따라)
-                log.warn("Message received is not of type UserRequest: {}", userReq.getClass().getSimpleName());
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-
-        log.info("encode complete");
     }
 
 

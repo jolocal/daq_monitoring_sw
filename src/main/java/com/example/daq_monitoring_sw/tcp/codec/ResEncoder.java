@@ -24,7 +24,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserRequest res, ByteBuf out) throws Exception {
 
-        log.info("encode start res: {}",res);
+        log.info("encode start res: {}", res);
 
         // 본문 데이터 생성
         ByteBuf body = Unpooled.buffer();
@@ -34,14 +34,14 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 String daqId_wd = res.getDaqId();
                 body.writeBytes(daqId_wd.getBytes(StandardCharsets.UTF_8));
 
-                int sensorCnt = res.getSensorCnt();
-                String sensorCntStr = String.format("%02d", sensorCnt);
-                body.writeBytes(sensorCntStr.getBytes(StandardCharsets.UTF_8));
-
-                for (String sensorId: res.getSensorIdsOrder()){
+                for (String sensorId : res.getSensorIdsOrder()) {
                     body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
+
+                    String sensorData = res.getParsedSensorData().get(sensorId);
+                    if (sensorData != null) {
+                        body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
+                    }
                 }
-                break;
 
             case RS:
                 String daqId_rs = res.getDaqId();
@@ -51,7 +51,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 String sensorCnt_rs_str = String.format("%02d", sensorCnt_rs);
                 body.writeBytes(sensorCnt_rs_str.getBytes(StandardCharsets.UTF_8));
 
-                for (String sensorId: res.getSensorIdsOrder()){
+                for (String sensorId : res.getSensorIdsOrder()) {
                     body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
                 }
                 break;
@@ -60,11 +60,11 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 String daqId_rd = res.getDaqId();
                 body.writeBytes(daqId_rd.getBytes(StandardCharsets.UTF_8));
 
-                for (String sensorId: res.getSensorIdsOrder()){
+                for (String sensorId : res.getSensorIdsOrder()) {
                     body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
 
                     String sensorData = res.getParsedSensorData().get(sensorId);
-                    if (sensorData != null){
+                    if (sensorData != null) {
                         body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
                     }
                 }
@@ -75,7 +75,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
 
         // 헤더 작성
         int packetLength = body.readableBytes() + 5; // STX(1) + length(2) + status(2) + ETX(1)
-        String packetLengthStr = String.format("%02d",packetLength);
+        String packetLengthStr = String.format("%02d", packetLength);
 
         // stx
         out.writeByte(ProtocolState.STX.getValue());
@@ -91,6 +91,8 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
 
         // etx
         out.writeByte(ProtocolState.ETX.getValue());
+
+        log.info("Encoded Data: {}", out.toString(StandardCharsets.UTF_8));
 
         ctx.writeAndFlush(out);
 
