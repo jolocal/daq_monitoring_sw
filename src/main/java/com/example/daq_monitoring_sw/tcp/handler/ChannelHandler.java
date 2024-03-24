@@ -1,6 +1,7 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
+import com.example.daq_monitoring_sw.tcp.dto.Status;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import com.example.daq_monitoring_sw.tcp.service.DataService;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
@@ -73,6 +74,19 @@ public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
                 case RQ -> {
                     /* 데이터 SUB */
                     log.info(" Reqeust [{}] start", daqCenter.getStatus());
+
+                    UserRequest checkUser = dataService.checkUser(ctx, userReq);
+                    if (checkUser != null) {
+                        daqCenter.setStatus(Status.RS);
+                        log.info(" RQ Reqeust -> [{}] Change", daqCenter.getStatus());
+
+                        ctx.writeAndFlush(userReq);
+
+                        log.info("시작됨?");
+                        // 비동기 실행
+                        dataService.startDataTransmission(ctx, checkUser);
+
+                    }
                 }
 
                 case ST -> {

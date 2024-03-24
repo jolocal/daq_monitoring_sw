@@ -1,6 +1,7 @@
 package com.example.daq_monitoring_sw.tcp.codec;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
+import com.example.daq_monitoring_sw.tcp.dto.Status;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -25,11 +26,13 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
     protected void encode(ChannelHandlerContext ctx, UserRequest res, ByteBuf out) throws Exception {
 
         log.info("encode start res: {}", res);
+        DaqCenter daqcenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        Status currentStatus = daqcenter.getStatus();
 
         // 본문 데이터 생성
         ByteBuf body = Unpooled.buffer();
 
-        switch (res.getStatus()) {
+        switch (currentStatus) {
             case WD:
                 String daqId_wd = res.getDaqId();
                 body.writeBytes(daqId_wd.getBytes(StandardCharsets.UTF_8));
