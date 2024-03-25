@@ -16,6 +16,6 @@ public class UserRequest {
     private String daqId;
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
-    private Map<String, String> parsedSensorData;
+    private Map<String, String> parsedSensorData; // TP01:+000.0
 }
 

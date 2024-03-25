@@ -45,6 +45,15 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                         body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
                     }
                 }
+                break;
+            case RQ:
+                String daqId_rq = res.getDaqId();
+                body.writeBytes(daqId_rq.getBytes(StandardCharsets.UTF_8));
+
+                for (String sensorId : res.getSensorIdsOrder()) {
+                    body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
+                }
+                break;
 
             case RS:
                 String daqId_rs = res.getDaqId();
@@ -57,27 +66,31 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 for (String sensorId : res.getSensorIdsOrder()) {
                     body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
                 }
+
+                log.info("여기는? body:{}",body);
                 break;
 
             case RD:
-                String daqId_rd = res.getDaqId();
-                body.writeBytes(daqId_rd.getBytes(StandardCharsets.UTF_8));
+                int sensorCnt_rd = res.getSensorCnt();
+                String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
+                body.writeBytes(sensorCnt_rd_str.getBytes(StandardCharsets.UTF_8));
 
                 for (String sensorId : res.getSensorIdsOrder()) {
-                    body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
-
                     String sensorData = res.getParsedSensorData().get(sensorId);
                     if (sensorData != null) {
                         body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
                     }
                 }
+
+                log.info("body: {}", body);
                 break;
+
             default:
                 throw new IllegalArgumentException("지원되지 않는 명령어 유형");
         }
 
         // 헤더 작성
-        int packetLength = body.readableBytes() + 5; // STX(1) + length(2) + status(2) + ETX(1)
+        int packetLength = body.readableBytes() + 6; // STX(1) + length(2) + status(2) + ETX(1)
         String packetLengthStr = String.format("%02d", packetLength);
 
         // stx
@@ -87,7 +100,11 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
         // command
         DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         String command = String.valueOf(daqCenter.getStatus());
-        out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
+        if (command.equals("RQ")){
+            out.writeBytes("RS".getBytes(StandardCharsets.UTF_8));
+        } else{
+            out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
+        }
 
         // body
         out.writeBytes(body);

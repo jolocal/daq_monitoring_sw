@@ -29,8 +29,8 @@ public class NettyServerSocket {
     @PreDestroy
     public void stop() throws IOException {
         if (serverChannel != null) {
-            serverChannel.close();
             serverChannel.parent().close();
+            serverChannel.close();
         }
     }
 }

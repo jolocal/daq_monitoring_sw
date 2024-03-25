@@ -121,7 +121,19 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 checkpoint(ProtocolState.ETX);
                 break;
 
-            case "RD":
+            case "RQ":
+                daqId = readLength(in, 5);
+
+                // channel에 저장
+                DaqCenter daqCenter_rQ = DaqCenter.builder()
+                        .daqId(daqId)
+                        .status(Status.RQ)
+                        .build();
+                ctx.channel().attr(DAQ_CENTER_KEY).set(daqCenter_rQ);
+
+                checkpoint(ProtocolState.ETX);
+                break;
+
             case "ST":
                 DaqCenter st_daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
                 DaqCenter st_update_daqCenter = DaqCenter.builder().status(Status.ST).build();
