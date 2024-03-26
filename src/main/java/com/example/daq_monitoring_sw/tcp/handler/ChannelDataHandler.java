@@ -1,12 +1,10 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
-import com.example.daq_monitoring_sw.tcp.dto.Status;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import com.example.daq_monitoring_sw.tcp.pub_sub.DataEventListener;
 import com.example.daq_monitoring_sw.tcp.service.DataService;
 import com.example.daq_monitoring_sw.tcp.service.ScheduledDataService;
-import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -14,9 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.example.daq_monitoring_sw.tcp.codec.ReqDecoder.DAQ_CENTER_KEY;
@@ -27,28 +22,13 @@ import static com.example.daq_monitoring_sw.tcp.codec.ReqDecoder.DAQ_CENTER_KEY;
 @Component
 @RequiredArgsConstructor
 @Sharable
-public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
+public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest> {
 
     private final ScheduledDataService scheduledDataService;
-    private final ChannelRepository channelRepository;
     private final DataService dataService;
 
     // 각 채널과 그에 대응하는 리스너 관리
     private final ConcurrentHashMap<String, DataEventListener> listenerGroup = new ConcurrentHashMap<>();
-
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        log.info("==================================== Client connected: {} ====================================", ctx.channel().remoteAddress());
-        channelRepository.channelActive(ctx);
-
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        log.info("==================================== Client disConnected: {} ====================================", ctx.channel().remoteAddress());
-        channelRepository.channelInactive(ctx);
-    }
 
 
     /* 예외 발생시 클라이언트와의 연결을 닫고 예외정보 출력 */
@@ -83,47 +63,50 @@ public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
 
                 case RQ -> {
                     /* 데이터 SUB */
-                    log.info(" Reqeust [{}] start", daqCenter.getStatus());
+                    log.info("Reqeust [{}] start", daqCenter.getStatus());
 
-                    // daqcenter 확인
+//                    // daqcenter 확인
+//                    Optional<DaqCenter> optionalDaqCenter = channelRepository.getChannelDaqCenter(userReq.getDaqId());
+//                    if (optionalDaqCenter.isPresent()) {
+//                        DaqCenter foundDaqCenter = optionalDaqCenter.get();
+//                        log.info("현재 접속된 사용자 정보: {}", foundDaqCenter);
+//
+//                        // 리스너 생성 및 등록
+//                        DataEventListener dataEventListener = new DataEventListener() {
+//                            // 2차 응답
+//                            @Override
+//                            public void onDataReceived(Map<String, String> collectedData) {
+//                                UserRequest res = UserRequest.builder()
+//                                        .status(Status.RD)
+//                                        .parsedSensorData(collectedData)
+//                                        .build();
+//                                log.info("Response for data received");
+//                                ctx.writeAndFlush(res);
+//                            }
+//                        };
+//
+//                        listenerGroup.put(userReq.getDaqId(), dataEventListener);
+//                        // 데이터 구독
+//                        dataService.subscribeToData(userReq, dataEventListener);
+//
+//                        // 1차 응답
+//                        log.info("First response: {}", userReq);
+//                        UserRequest firstRes = UserRequest.builder()
+//                                .status(Status.RS)
+//                                .daqId(foundDaqCenter.getDaqId())
+//                                .sensorCnt(foundDaqCenter.getSensorCnt())
+//                                .sensorIdsOrder(foundDaqCenter.getSensorIdsOrder())
+//                                .build();
+//
+//                        ctx.writeAndFlush(firstRes);
+//
+//                    } else {
+//                        log.info("DaqCenter not found for ID: {}", userReq.getDaqId());
+//                    }
 
-                    Optional<DaqCenter> optionalDaqCenter = channelRepository.getChannelDaqCenter(userReq.getDaqId());
-                    if (optionalDaqCenter.isPresent()) {
-                        DaqCenter foundDaqCenter = optionalDaqCenter.get();
-
-                        // 리스너 생성 및 등록
-                        DataEventListener dataEventListener = new DataEventListener() {
-                            // 2차 응답
-                            @Override
-                            public void onDataReceived(Map<String, String> collectedData) {
-                                UserRequest res = userReq.builder()
-                                        .status(Status.RD)
-                                        .parsedSensorData(collectedData)
-                                        .build();
-                                log.info("Response for data received");
-                                ctx.writeAndFlush(res);
-                            }
-                        };
-                        listenerGroup.put(userReq.getDaqId(), dataEventListener);
-                        // 데이터 구독
-                        dataService.subscribeToData(userReq, dataEventListener);
-
-                        // 1차 응답
-                        log.info("First response: {}", userReq);
-                        UserRequest firstRes = userReq.builder()
-                                .status(Status.RS)
-                                .daqId(foundDaqCenter.getDaqId())
-                                .sensorCnt(foundDaqCenter.getSensorCnt())
-                                .sensorIdsOrder(foundDaqCenter.getSensorIdsOrder())
-                                .build();
-
-                        ctx.writeAndFlush(firstRes);
-
-                    } else {
-                        log.info("DaqCenter not found for ID: {}", userReq.getDaqId());
-                    }
-
-                   /* UserRequest checkUser = scheduledDataService.checkUser(ctx, userReq);
+                    /*
+                    // TEMP 데이터 보내기 //
+                    UserRequest checkUser = scheduledDataService.checkUser(ctx, userReq);
                     if (checkUser != null) {
                         daqCenter.setStatus(Status.RS);
                         log.info(" RQ Reqeust -> [{}] Change", daqCenter.getStatus());
@@ -141,8 +124,10 @@ public class ChannelHandler extends SimpleChannelInboundHandler<UserRequest> {
                                     log.error("An error occurred during data transmission: ", ex);
                                     return null;
                                 });
-                    }*/
+                    }
+                    */
                 }
+
 
 
                 case ST -> {

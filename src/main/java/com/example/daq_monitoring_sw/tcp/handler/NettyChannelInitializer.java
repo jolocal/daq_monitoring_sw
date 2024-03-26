@@ -15,16 +15,19 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
-    private final ChannelHandler nettyChannelHandler;
+    private final ChannelDataHandler nettyChannelDataHandler;
+    private final ChannelManagerHandler channelManagerHandler;
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
+
+        pipeline.addLast("channelManagerHandler", channelManagerHandler);
 
         pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
         pipeline.addLast(new ReqDecoder());
         pipeline.addLast(new ResEncoder());
 
-        pipeline.addLast("nettyChannelHandler", nettyChannelHandler);
+        pipeline.addLast("nettyChannelDataHandler", nettyChannelDataHandler);
     }
 }

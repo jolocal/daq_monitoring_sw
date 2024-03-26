@@ -37,8 +37,11 @@ public class DataService {
         }
 
         // 등록된 리스너에게 데이터 발행
+        log.info("------------------------------------------- 읽기 요청 리스너 검색 중 -------------------------------------------");
         if (dataPublisher.hasListenersFor(userRequest)) {
+            log.info("읽기 요청 리스너 검색 완료");
             dataPublisher.publishData(userRequest,collectedData);
+            log.info("데이터 발행 완료.");
         } else {
             log.info("현재 등록된 리스너가 없습니다.");
         }

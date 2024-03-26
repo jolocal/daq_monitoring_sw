@@ -13,7 +13,12 @@ public enum Status {
     ST("STOP"),
 
     RQ("REQUEST_TO_SERVER"),
-    RS("RESPONSE_TO_CLIENT")
+    RS("RESPONSE_TO_CLIENT"),
+
+    CONNECTED("CONNECTED"),
+    DISCONNECTED("DISCONNECTED"),
+    RECONNECTING("RECONNECTING")
+
     ;
 
     private String desc;

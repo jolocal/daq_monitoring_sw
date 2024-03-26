@@ -36,7 +36,6 @@ public class DataPublisher {
                 listener.getListener().onDataReceived(collectedData);
             }
         }
-
     }
 
 
@@ -48,7 +47,6 @@ public class DataPublisher {
                 return true;
             }
         }
-        log.info("haslistenersFor false");
         return false;
     }
 
