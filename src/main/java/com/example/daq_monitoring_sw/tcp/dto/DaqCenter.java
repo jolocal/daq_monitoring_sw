@@ -12,9 +12,15 @@ import java.util.Map;
 @Builder
 public class DaqCenter {
 
+    // write
     private String daqId;
     private Status status;
 
+    // read
+    private String channelId;
+    private String readTo;
+
+    // common
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
     private Map<String, String> parsedSensorData;

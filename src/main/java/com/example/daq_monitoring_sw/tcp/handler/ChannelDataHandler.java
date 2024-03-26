@@ -1,10 +1,14 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
+import com.example.daq_monitoring_sw.tcp.dto.Status;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import com.example.daq_monitoring_sw.tcp.pub_sub.DataEventListener;
+import com.example.daq_monitoring_sw.tcp.pub_sub.DataPublisher;
+import com.example.daq_monitoring_sw.tcp.pub_sub.Listener;
 import com.example.daq_monitoring_sw.tcp.service.DataService;
 import com.example.daq_monitoring_sw.tcp.service.ScheduledDataService;
+import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,9 +16,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.example.daq_monitoring_sw.tcp.codec.ReqDecoder.DAQ_CENTER_KEY;
+import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
 /* Netty Server의 핵심부분 */
 /* 클라이언트와의 연결 수립, 데이터 읽기 및 쓰기, 예외처리 등의 로직 */
@@ -26,9 +32,11 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
     private final ScheduledDataService scheduledDataService;
     private final DataService dataService;
+    private final ChannelRepository channelRepository;
+    private final DataPublisher dataPublisher;
 
     // 각 채널과 그에 대응하는 리스너 관리
-    private final ConcurrentHashMap<String, DataEventListener> listenerGroup = new ConcurrentHashMap<>();
+//    private final ConcurrentHashMap<String, DataEventListener> listenerGroup = new ConcurrentHashMap<>();
 
 
     /* 예외 발생시 클라이언트와의 연결을 닫고 예외정보 출력 */
@@ -61,9 +69,80 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     dataService.writeData(userReq);
                 }
 
+                // 리스너 생성, 데이터 발행 클래스에 등록
                 case RQ -> {
-                    /* 데이터 SUB */
+
                     log.info("Reqeust [{}] start", daqCenter.getStatus());
+
+                    // wd-channel 확인
+                    Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
+
+                    if (wdActiveChannel.isPresent()) {
+                        // RS: 1차응답
+                        DaqCenter currentDaqcenter = wdActiveChannel.get();
+                        log.info("활성화 중인 WD 채널 정보: {}", currentDaqcenter);
+
+                        UserRequest firstRes = UserRequest.builder()
+                                .status(Status.RS)
+                                .daqId(currentDaqcenter.getDaqId())
+                                .sensorCnt(currentDaqcenter.getSensorCnt())
+                                .sensorIdsOrder(currentDaqcenter.getSensorIdsOrder())
+                                .build();
+
+                        ctx.writeAndFlush(firstRes);
+
+                        //////////////////////////////////////////////////////////////////////
+                        DataEventListener dataEventListener = createDataEventListener(ctx, firstRes);
+                        dataService.subscribeToData(userReq, dataEventListener);
+
+                       /* // 리스너 생성 및 구독 로직
+                        if (dataService.isSubscribed(userReq)){
+                            log.info("여기타나11111111111?");
+                            DataEventListener dataEventListener = createDataEventListener(ctx, userReq);
+                            log.info("여기타나22222222222?");
+                            dataService.subscribeToData(userReq, dataEventListener);
+                            log.info("여기타나33333333?");
+                        }*/
+
+                    } else {
+                        log.info("현재 활성화된 WD channel - {} 이 없습니다.", userReq.getReadTo());
+                    }
+                }
+
+                case ST -> {
+                    log.info(" Reqeust [{}] start", daqCenter.getStatus());
+                }
+
+                default -> throw new IllegalStateException("Unexpected value: " + daqCenter.getStatus());
+            }
+
+        } else {
+            throw new IllegalStateException("저장된 채널 정보가 없습니다.");
+        }
+
+    }
+
+    // RQ요청에 대응하는 리스너 생성, ( WD 데이터가 업데이트될 때마다 호출되며, 변경된 데이터를 클라이언트에게 전송 )
+    private DataEventListener createDataEventListener(ChannelHandlerContext ctx, UserRequest firstRes) {
+        return collectedData -> {
+            UserRequest res = UserRequest.builder()
+                    .status(Status.RD)
+                    .sensorCnt(firstRes.getSensorCnt())
+                    .sensorIdsOrder(firstRes.getSensorIdsOrder())
+                    .parsedSensorData(collectedData)
+                    .build();
+            log.info("onDataRecevied res: {}", res);
+
+            ctx.writeAndFlush(res);
+        };
+    }
+
+}
+
+//                        listenerGroup.put(userReq.getChannelId(), dataEventListener);
+//                        String rq_daqId = daqCenter.getDaqId();
+//                        listenerGroup.put(rq_daqId, dataEventListener);
+//                        dataService.subscribeToData(rq_daqId, dataEventListener);
 
 //                    // daqcenter 확인
 //                    Optional<DaqCenter> optionalDaqCenter = channelRepository.getChannelDaqCenter(userReq.getDaqId());
@@ -104,7 +183,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 //                        log.info("DaqCenter not found for ID: {}", userReq.getDaqId());
 //                    }
 
-                    /*
+/*
                     // TEMP 데이터 보내기 //
                     UserRequest checkUser = scheduledDataService.checkUser(ctx, userReq);
                     if (checkUser != null) {
@@ -126,22 +205,6 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                                 });
                     }
                     */
-                }
 
-
-
-                case ST -> {
-                    log.info(" Reqeust [{}] start", daqCenter.getStatus());
-                    scheduledDataService.handleStopRequest(ctx);
-                }
-                default -> throw new IllegalStateException("Unexpected value: " + daqCenter.getStatus());
-            }
-
-        } else {
-            throw new IllegalStateException("저장된 채널 정보가 없습니다.");
-        }
-
-    }
-
-
-}
+//                    ST 요청시
+//                    scheduledDataService.handleStopRequest(ctx);

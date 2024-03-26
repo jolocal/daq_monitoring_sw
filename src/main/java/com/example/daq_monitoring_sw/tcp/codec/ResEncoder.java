@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 
-import static com.example.daq_monitoring_sw.tcp.codec.ReqDecoder.DAQ_CENTER_KEY;
+import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
+
 
 @Slf4j
 @Component
@@ -27,7 +28,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
 
         log.info("encode start res: {}", res);
         DaqCenter daqcenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
-        Status currentStatus = daqcenter.getStatus();
+        Status currentStatus = res.getStatus();
 
         // 본문 데이터 생성
         ByteBuf body = Unpooled.buffer();
@@ -66,8 +67,6 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 for (String sensorId : res.getSensorIdsOrder()) {
                     body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
                 }
-
-                log.info("여기는? body:{}",body);
                 break;
 
             case RD:
@@ -77,12 +76,11 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
 
                 for (String sensorId : res.getSensorIdsOrder()) {
                     String sensorData = res.getParsedSensorData().get(sensorId);
+
                     if (sensorData != null) {
                         body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
                     }
                 }
-
-                log.info("body: {}", body);
                 break;
 
             default:
@@ -98,13 +96,13 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
         out.writeBytes(packetLengthStr.getBytes(StandardCharsets.UTF_8));
 
         // command
-        DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
-        String command = String.valueOf(daqCenter.getStatus());
-        if (command.equals("RQ")){
+        String command = currentStatus.toString();
+        out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
+     /*   if (command.equals("RQ")){
             out.writeBytes("RS".getBytes(StandardCharsets.UTF_8));
         } else{
             out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
-        }
+        }*/
 
         // body
         out.writeBytes(body);

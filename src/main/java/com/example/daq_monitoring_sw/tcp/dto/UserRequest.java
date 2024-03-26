@@ -12,8 +12,15 @@ import java.util.Map;
 @Builder
 public class UserRequest {
 
+    // write
     private Status status;
     private String daqId;
+
+    // read
+    private String channelId;
+    private String readTo;
+
+    // common
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
     private Map<String, String> parsedSensorData; // TP01:+000.0

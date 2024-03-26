@@ -1,66 +1,72 @@
-//package com.example.daq_monitoring_sw.tcp.util;
-//
-//import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
-//import io.netty.channel.ChannelHandlerContext;
-//import io.netty.channel.ChannelInboundHandlerAdapter;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.stereotype.Component;
-//
-//import java.util.Map;
-//import java.util.Optional;
-//import java.util.concurrent.ConcurrentHashMap;
-//
-//import static com.example.daq_monitoring_sw.tcp.codec.ReqDecoder.DAQ_CENTER_KEY;
-//
-//@Slf4j
-//@Component
-//public class ChannelRepository extends ChannelInboundHandlerAdapter {
-//    private static final Map<String, ChannelHandlerContext> channelGroup = new ConcurrentHashMap<>();
-//
-//    // 채널이 활성화 되었을 때 실행
-//    @Override
-//    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-//        String daqId = retrieveDaqId(ctx);
-//        if (daqId != null){
-//            channelGroup.put(daqId,ctx);
-//            log.info("Channel active: {}" , ctx.channel().id().asLongText());
-//        }
-//        super.channelActive(ctx);
-//    }
-//
-//    // 채널이 비활성화되었을 때 실행
-//    @Override
-//    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-//        String daqId = retrieveDaqId(ctx);
-//        if (daqId != null){
-//            channelGroup.remove(daqId,ctx);
-//            log.info("Channel inactive: " + ctx.channel().id().asLongText());
-//            // TODO: 리소스 정리
-//            ctx.close(); // 채널 닫기
-//        }
-//
-//        super.channelInactive(ctx);
-//    }
-//
-//    // 채널의 상태에 접근하는 메서드
-//    public Optional<DaqCenter> getChannelDaqCenter(String daqId){
-//        return Optional.ofNullable((DaqCenter) channelGroup.get(daqId));
-//    }
-//
-//    // 모든 연결된 채널에 메시지를 전송
-//    public static void sendMessageToAll(String message){
-//        for (ChannelHandlerContext ctx: channelGroup.values()){
-//            ctx.writeAndFlush(message);
-//        }
-//    }
-//
-//    // daqId 추출
-//    private String retrieveDaqId(ChannelHandlerContext ctx){
-//        DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
-//        if (daqCenter != null){
-//            return daqCenter.getDaqId();
-//        }
-//        return "";
-//    }
-//
-//}
+package com.example.daq_monitoring_sw.tcp.util;
+
+import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
+import com.example.daq_monitoring_sw.web.service.WebChannelEventService;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.util.AttributeKey;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class ChannelRepository extends ChannelInboundHandlerAdapter {
+
+    private final WebChannelEventService channelEventService;
+
+    public static final AttributeKey<DaqCenter> DAQ_CENTER_KEY = AttributeKey.valueOf("DAQ_CENTER");
+    private static final Map<String, DaqCenter> channelGroup = new ConcurrentHashMap<>();
+
+
+    // 특정 채널의 현재 상태 조회
+    public DaqCenter currentDaqStatus(String daqId){
+        return channelGroup.get(daqId);
+    }
+
+    // 특정 채널 조회
+    public Optional<DaqCenter> findChannel(String daqId) {
+        return Optional.ofNullable((DaqCenter) channelGroup.get(daqId));
+    }
+
+    // 모든 채널 정보 조회
+    public static Collection<DaqCenter> findAllChannel(){
+        return channelGroup.values();
+    }
+
+    public static void putChannel(String daqId, DaqCenter daqCenter) {
+        channelGroup.put(daqId,daqCenter);
+    }
+
+    public void removeChannel(String channelId) {
+        channelGroup.remove(channelId);
+    }
+
+}
+/*
+    // 모든 연결된 채널에 메시지를 전송
+    public static void sendMessageToAll(String message){
+
+        for (channelGroup channel : )
+
+
+        for (ChannelHandlerContext ctx: channelGroup.values()){
+            ctx.writeAndFlush(message);
+        }
+    }
+
+    public DaqCenter findChannelAttr(String daqId){
+        DaqCenter daqCenter = channelGroup.get(daqId);
+        return daqCenter;
+    }
+*/

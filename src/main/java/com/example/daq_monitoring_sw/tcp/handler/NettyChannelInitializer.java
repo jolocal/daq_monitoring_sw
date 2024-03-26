@@ -2,6 +2,7 @@ package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.codec.ReqDecoder;
 import com.example.daq_monitoring_sw.tcp.codec.ResEncoder;
+import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
     private final ChannelDataHandler nettyChannelDataHandler;
     private final ChannelManagerHandler channelManagerHandler;
+    private final ChannelRepository channelRepository;
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
@@ -25,7 +27,7 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
 
         pipeline.addLast(new LoggingHandler(LogLevel.INFO));
 
-        pipeline.addLast(new ReqDecoder());
+        pipeline.addLast(new ReqDecoder(channelRepository));
         pipeline.addLast(new ResEncoder());
 
         pipeline.addLast("nettyChannelDataHandler", nettyChannelDataHandler);

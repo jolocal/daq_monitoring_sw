@@ -10,7 +10,8 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class Listener {
-    private final String daqId;
-    private final List<String> sensorList;
-    private final DataEventListener listener;
+    private  String channelId;
+    private  String readTo;
+    private  List<String> sensorList;
+    private  DataEventListener listener;
 }
