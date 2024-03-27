@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
@@ -26,7 +27,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserRequest res, ByteBuf out) throws Exception {
 
-//        log.info("encode start res: {}", res);
+        log.info("encode start res: {}", res);
         DaqCenter daqcenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         Status currentStatus = res.getStatus();
 
@@ -74,13 +75,16 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
                 body.writeBytes(sensorCnt_rd_str.getBytes(StandardCharsets.UTF_8));
 
-                for (String sensorId : res.getSensorIdsOrder()) {
-                    String sensorData = res.getParsedSensorData().get(sensorId);
+                String resData = res.getResData();
+                body.writeBytes(resData.getBytes(StandardCharsets.UTF_8));
 
-                    if (sensorData != null) {
-                        body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
-                    }
-                }
+//                for (String sensorId : res.getSensorIdsOrder()) {
+//                    String sensorData = res.getParsedSensorData().get(sensorId);
+//
+//                    if (sensorData != null) {
+//                        body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
+//                    }
+//                }
                 break;
 
             default:

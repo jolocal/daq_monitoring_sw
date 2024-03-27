@@ -3,10 +3,8 @@ package com.example.daq_monitoring_sw.tcp.handler;
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.Status;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
-import com.example.daq_monitoring_sw.tcp.pub_sub.DataEventListener;
 import com.example.daq_monitoring_sw.tcp.pub_sub.DataManager;
 import com.example.daq_monitoring_sw.tcp.pub_sub.DataPublisher;
-import com.example.daq_monitoring_sw.tcp.pub_sub.Listener;
 import com.example.daq_monitoring_sw.tcp.service.DataService;
 import com.example.daq_monitoring_sw.tcp.service.ScheduledDataService;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
@@ -17,9 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
@@ -77,27 +73,30 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     }
 
                     // RS: 1차응답
-                    DaqCenter currentDaqcenter = wdActiveChannel.get();
-                    log.info("활성화 중인 WD 채널 정보: {}", currentDaqcenter);
+                    DaqCenter currentWdDaqcenter = wdActiveChannel.get();
+                    log.info("활성화 중인 WD 채널 정보: {}", currentWdDaqcenter);
 
-                    UserRequest firstRes = createFirstRes(currentDaqcenter);
+                    UserRequest firstRes = createFirstRes(currentWdDaqcenter);
                     ctx.writeAndFlush(firstRes);
 
                     //////////////////////////////////////////////////////////////////////
 
                     // RD: 2차응답
-                    String channelId = currentChannel.getChannelId();
-                    dataManager.subscribe(channelId, data -> {
+                    log.info("currentChannel info: {}", currentChannel.toString());
+
+                    String subscribeKey = currentChannel.getReadTo();
+                    log.info("subscribeKey: {}", subscribeKey);
+                    dataManager.subscribe(subscribeKey, newData -> {
+                        log.info("subscribe key: {} , datas: {}", subscribeKey,newData);
+
                         // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
-                        UserRequest ResponseData = UserRequest.builder()
+                        UserRequest resData = UserRequest.builder()
                                 .status(Status.RD)
                                 .sensorCnt(firstRes.getSensorCnt())
-                                .sensorIdsOrder(firstRes.getSensorIdsOrder())
-                                .parsedSensorData(data)
+                                .resData(newData)
                                 .build();
 
-                        ctx.writeAndFlush(ResponseData);
-
+                        ctx.writeAndFlush(resData);
                     });
                 }
 
@@ -123,19 +122,6 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 .build();
     }
 
-    private void handleRequest(ChannelHandlerContext ctx, UserRequest userReq) {
-        // RQ 처리 로직
-        Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
-
-        if (!wdActiveChannel.isPresent()) {
-            log.info("활성화된 WD 채널이 없습니다.");
-            return;
-        }
-
-        // 구독 설정 로직
-        String channelId = userReq.getChannelId();
-
-    }
 
 
 //    // RQ요청에 대응하는 리스너 생성, ( WD 데이터가 업데이트될 때마다 호출되며, 변경된 데이터를 클라이언트에게 전송 )
