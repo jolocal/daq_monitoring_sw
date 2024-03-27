@@ -39,11 +39,23 @@ public class DataManager {
                 String key = daqId + ":" + sensorId;
                 //dataMap.put(key, data); // DB 처리용 Map에 저장
 
-                realTimeData.put(key, data);
+                // 2. 중복 데이터 체크
+                String existingData = realTimeData.get(key);
+                if (existingData == null || !existingData.equals(data)) {
+                    realTimeData.put(key, data);
+                    log.info("Data 저장 및 발행: Key = {}, Value = {}", key, data);
+                    publishData(key, data);
+                }
+
+
+
+
+                //1. 발행
+/*                realTimeData.put(key, data);
 
                 log.info(">>>>>>>>>>>>>>>>>> 현재 realTimeData 데이터 저장: Key = {}, Value = {}", daqId, data);
 
-                publishData(daqId, realTimeData.get(key));
+                publishData(daqId, realTimeData.get(key));*/
             }
         }
 
@@ -72,4 +84,45 @@ public class DataManager {
         log.info("{} 채널 구독자 등록, 현재 구독자 수: {}", key, subscribers.size());
     }
 
+}
+
+
+//3. Queue를 사용하여 데이터가 들어온 순서를 유지하고, publishDataInOrder 메소드를 통해 순차적으로 데이터를 발행합니다.
+
+public class DataPublisher {
+    private final Queue<String> publishQueue = new LinkedList<>();
+
+    public void writeData(UserRequest userRequest) {
+        String daqId = userRequest.getDaqId();
+        List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
+        Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
+
+        for (String sensorId : sensorIdsOrder) {
+            if (parsedSensorData.containsKey(sensorId)) {
+                String data = parsedSensorData.get(sensorId);
+                String key = daqId + ":" + sensorId;
+
+                realTimeData.put(key, data);
+                publishQueue.add(key); // 들어온 순서대로 큐에 추가
+                log.info("Data 저장: Key = {}, Value = {}", key, data);
+            }
+        }
+
+        publishDataInOrder(); // 순서대로 데이터 발행
+    }
+
+    private void publishDataInOrder() {
+        while (!publishQueue.isEmpty()) {
+            String key = publishQueue.poll(); // 큐에서 하나씩 꺼내서
+            String data = realTimeData.get(key);
+            if (data != null) {
+                publishData(key, data); // 데이터 발행
+                log.info("Data 발행: Key = {}, Value = {}", key, data);
+            }
+        }
+    }
+
+    private void publishData(String key, String data) {
+        // 발행 로직
+    }
 }
