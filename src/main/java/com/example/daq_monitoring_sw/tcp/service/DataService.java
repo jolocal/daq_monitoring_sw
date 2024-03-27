@@ -21,9 +21,9 @@ public class DataService {
     private final DataPublisher dataPublisher;
     Map<String, String> collectedData = new LinkedHashMap<>();
 
-
     public void writeData(UserRequest userRequest) {
         log.info("writeData userRequest: {}", userRequest);
+
         String daqId = userRequest.getDaqId();
         List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
         Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
@@ -33,7 +33,7 @@ public class DataService {
             if (data != null) {
                 /*String key = daqId + ":" + sensorId;*/
                 collectedData.put(sensorId, data); // ex: daqId:PR01 = +000.0
-                log.info("collectedData: {}", collectedData);
+//                log.info("collectedData: {}", collectedData);
             }
         }
 
@@ -42,18 +42,6 @@ public class DataService {
             dataPublisher.publishData(collectedData);
         }
     }
-
-//        log.info("------------------------------------------- 읽기 요청 리스너 검색 중 -------------------------------------------");
-//        if (dataPublisher.hasListenersFor(userRequest)) {
-//            dataPublisher.PublisherListenersList();
-//            log.info("읽기 요청 리스너 검색 완료");
-//            dataPublisher.publishData(userRequest,collectedData);
-//            log.info("데이터 발행 완료.");
-//        } else {
-//            dataPublisher.PublisherListenersList();
-//            log.info("현재 등록된 리스너가 없습니다.");
-//        }
-
 
     public void subscribeToData(UserRequest userReq, DataEventListener dataEventListener) {
         // 리스너 객체 초기화
@@ -64,7 +52,7 @@ public class DataService {
                 .listener(dataEventListener)
                 .build();
 
-        log.info("리스너 객체 생성: {}, 데이터 구독", listener.toString());
+//        log.info("리스너 객체 생성: {}, 데이터 구독", listener.toString());
         dataPublisher.subscribe(listener);
     }
 
@@ -73,10 +61,4 @@ public class DataService {
         dataPublisher.unsubscribe(dataEventListener);
     }
 
-    // 해당 유저가 이미 리스너에 등록되었는지 확인하는 로직
-//    public boolean isSubscribed(UserRequest userReq) {
-//        String channelId = userReq.getChannelId(); // UserRequest와 연관된 식별자
-//        return dataPublisher.getListeners().stream()
-//                .anyMatch(listener -> listener.getChannelId().equals(channelId));
-//    }
 }

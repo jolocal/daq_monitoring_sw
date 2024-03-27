@@ -1,5 +1,6 @@
 package com.example.daq_monitoring_sw.tcp.pub_sub;
 
+import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,10 @@ public class DataPublisher {
         for (Listener listener : listenerGroup){
             log.info("listener: {}", listener.toString());
         }
+    }
+
+    public boolean isListenerRegistered(String channelId){
+        return false;
     }
 
 //    public boolean hasListenersFor(UserRequest userRequest) {

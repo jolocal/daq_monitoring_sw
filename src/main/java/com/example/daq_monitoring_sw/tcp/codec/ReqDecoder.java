@@ -59,7 +59,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                             .parsedSensorData(daqCenter.getParsedSensorData())
                             .build();
 
-                    log.info("[DECODER] channelRepository 저장 확인: {}", findAllChannel());
                     out.add(userRequest);
                 }
                 checkpoint(ProtocolState.STX);

@@ -26,7 +26,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserRequest res, ByteBuf out) throws Exception {
 
-        log.info("encode start res: {}", res);
+//        log.info("encode start res: {}", res);
         DaqCenter daqcenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         Status currentStatus = res.getStatus();
 
