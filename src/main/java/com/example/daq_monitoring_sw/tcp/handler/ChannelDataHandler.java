@@ -66,7 +66,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     // wd-channel 확인
                     Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
 
-                    if (!wdActiveChannel.isPresent()) {
+                    if (wdActiveChannel.isEmpty()) {
                         log.info("활성화된 WD 채널이 없습니다.");
                         return;
                     }
