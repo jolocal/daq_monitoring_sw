@@ -5,6 +5,7 @@ import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-
+        log.info("stx Current buffer state before switch: {}", ByteBufUtil.hexDump(in));
         switch (state()) {
             case STX:
                 String stx = readLength(in, 1);
@@ -61,6 +62,8 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                     out.add(userRequest);
                 }
+
+                log.info("etx Current buffer state before switch: {}", ByteBufUtil.hexDump(in));
                 checkpoint(ProtocolState.STX);
         }
 
