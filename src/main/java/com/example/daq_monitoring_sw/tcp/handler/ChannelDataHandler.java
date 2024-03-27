@@ -59,7 +59,6 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     /* 데이터 PUB */
                     // daqId:sensorId
                     dataManager.writeData(userReq);
-//                    dataService.writeData(userReq);
                 }
 
                 // 리스너 생성, 데이터 발행 클래스에 등록
@@ -86,6 +85,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
                     String subscribeKey = currentChannel.getReadTo();
                     log.info("subscribeKey: {}", subscribeKey);
+
                     dataManager.subscribe(subscribeKey, newData -> {
                         log.info("subscribe key: {} , datas: {}", subscribeKey,newData);
 
