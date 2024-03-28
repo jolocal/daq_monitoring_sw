@@ -19,7 +19,7 @@ public class UserRequest {
     // read
     private String channelId;
     private String readTo;
-    private String resData;
+    private List<String> resDataList;
 
     // common
     private Integer sensorCnt;
