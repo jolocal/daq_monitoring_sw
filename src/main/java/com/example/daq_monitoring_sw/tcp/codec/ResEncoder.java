@@ -75,16 +75,11 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
                 body.writeBytes(sensorCnt_rd_str.getBytes(StandardCharsets.UTF_8));
 
-                String resData = res.getResData();
-                body.writeBytes(resData.getBytes(StandardCharsets.UTF_8));
-
-//                for (String sensorId : res.getSensorIdsOrder()) {
-//                    String sensorData = res.getParsedSensorData().get(sensorId);
-//
-//                    if (sensorData != null) {
-//                        body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
-//                    }
-//                }
+                List<String> resDataList = res.getResDataList();
+                for (String resData : resDataList){
+                    byte[] dataBytes  = resData.getBytes(StandardCharsets.UTF_8);
+                    body.writeBytes(dataBytes);
+                }
                 break;
 
             default:
@@ -102,11 +97,6 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
         // command
         String command = currentStatus.toString();
         out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
-     /*   if (command.equals("RQ")){
-            out.writeBytes("RS".getBytes(StandardCharsets.UTF_8));
-        } else{
-            out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
-        }*/
 
         // body
         out.writeBytes(body);

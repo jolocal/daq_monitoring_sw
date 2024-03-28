@@ -11,6 +11,7 @@ import io.netty.handler.codec.ReplayingDecoder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -28,7 +29,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        log.info("stx Current buffer state before switch: {}", ByteBufUtil.hexDump(in));
         switch (state()) {
             case STX:
                 String stx = readLength(in, 1);
@@ -62,8 +62,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                     out.add(userRequest);
                 }
-
-                log.info("etx Current buffer state before switch: {}", ByteBufUtil.hexDump(in));
                 checkpoint(ProtocolState.STX);
         }
 
