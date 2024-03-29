@@ -25,9 +25,7 @@ dependencies {
 	// https://mvnrepository.com/artifact/io.netty/netty-all
 	implementation group: 'io.netty', name: 'netty-all', version: '4.1.86.Final'
 
-	implementation('org.springframework.boot:spring-boot-starter-data-redis')
 
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     compileOnly 'org.projectlombok:lombok'
@@ -35,6 +33,7 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
+
 }
 
 tasks.named('test') {

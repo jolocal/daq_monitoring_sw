@@ -33,7 +33,28 @@ public class DataManager {
         log.info("[ 데이터 큐 사이즈 ]: {}", dataQueue.size());
 
         // 큐에서 데이터 처리
-        while ((userRequest = dataQueue.peek()) != null) { // 큐에서 데이터를 제거하지 않음
+        if(!dataQueue.isEmpty()){
+            UserRequest peek = dataQueue.peek();
+            String daqId = peek.getDaqId();
+            List<String> sensorIdsOrder = peek.getSensorIdsOrder();
+            Map<String, String> parsedSensorData = peek.getParsedSensorData();
+
+            List<String> resDataList = new ArrayList<>();
+
+            for (String sensorId : sensorIdsOrder) {
+                if (parsedSensorData.containsKey(sensorId)) {
+                    String dataValue = parsedSensorData.get(sensorId);
+                    resDataList.add(dataValue);
+                }
+            }
+            log.info("[writeData] daqId: {} sensorId: {} dataValue: {}", daqId, sensorIdsOrder, resDataList);
+
+            //데이터 발행
+            publishData(daqId, resDataList);
+
+        }
+
+      /*  while ((userRequest = dataQueue.peek()) != null) { // 큐에서 데이터를 제거하지 않음
 //        while ((userRequest = dataQueue.poll()) != null) {
 
             String daqId = userRequest.getDaqId();
@@ -55,7 +76,7 @@ public class DataManager {
 
             //데이터 발행
             publishData(daqId, resDataList);
-        }
+        }*/
     }
 
     // 데이터 발행
@@ -63,6 +84,8 @@ public class DataManager {
         if (subscribers.containsKey(key)) {
             log.info("데이터 발행: {} 채널에 {} 데이터 발행", key, resDataList);
             subscribers.get(key).accept(resDataList);
+
+            // 발행한 데이터 삭제
         }
     }
 

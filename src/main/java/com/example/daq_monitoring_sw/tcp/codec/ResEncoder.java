@@ -110,10 +110,10 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
 
     }
 
-    @Override
+/*    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace(); // 예외출력
         ctx.close(); // 채널 닫기 및 네트워크 리소스 정리
-    }
+    }*/
 
 }
