@@ -3,8 +3,18 @@ server:
   port: 8888        # 서버 포트 번호
 
 netty:
-  port: 8000
+  port: 1433
   boss-count: 1    # Netty boss 쓰레드 개수
   worker-count: 4  # Netty worker 쓰레드 개수
   keep-alive: true # TCP keep-alive 설정
   backlog: 100     # TCP backlog 설정
+
+#spring:
+#  kafka:
+#    consumer:
+#
+#
+#    producer:
+#      bootstrap-servers: localhost:9092
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.apache.kafka.common.serialization.StringSerializer
