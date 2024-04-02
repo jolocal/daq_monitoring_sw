@@ -4,6 +4,7 @@ server:
 
 netty:
   port: 1433
+#  port: 8000
   boss-count: 1    # Netty boss 쓰레드 개수
   worker-count: 4  # Netty worker 쓰레드 개수
   keep-alive: true # TCP keep-alive 설정
