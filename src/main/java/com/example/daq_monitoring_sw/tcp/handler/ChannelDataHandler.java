@@ -67,47 +67,48 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     // wd-channel 확인
                     Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
 
+                    // WD 사용자 확인 (존재하지 않더라도 리스너 등록)
                     if (wdActiveChannel.isEmpty()) {
-                        log.info("활성화된 WD 채널이 없습니다.");
-                        return;
+                        log.info(">>>>>>>>>>>>>>>>> 활성화된 WD 채널이 없습니다. 리스너 등록을 진행합니다.");
+                    } else {
+                        // WD 사용자가 존재할 경우의 추가 로직
+                        // RS: 1차응답
+                        DaqCenter currentWdDaqcenter = wdActiveChannel.get();
+                        log.info("활성화 중인 WD 채널 정보: {}", currentWdDaqcenter);
+
+                        UserRequest firstRes = createFirstRes(currentWdDaqcenter);
+                        ctx.writeAndFlush(firstRes);
                     }
-
-                    // RS: 1차응답
-                    DaqCenter currentWdDaqcenter = wdActiveChannel.get();
-                    log.info("활성화 중인 WD 채널 정보: {}", currentWdDaqcenter);
-
-                    UserRequest firstRes = createFirstRes(currentWdDaqcenter);
-                    ctx.writeAndFlush(firstRes);
 
                     //////////////////////////////////////////////////////////////////////
 
-                    // RD: 2차응답
+                    // RD: 2차응답 준비 및 리스너 등록
                     log.info("currentChannel info: {}", currentChannel.toString());
 
+                    String channelId = currentChannel.getChannelId();
                     String subscribeKey = currentChannel.getReadTo();
-                    log.info("subscribeKey: {}", subscribeKey);
 
-                    dataManager.subscribe(subscribeKey, resDataList -> {
-                        log.info("subscribe accept() -> {} 데이터 구독 발행된 데이터: {}", subscribeKey, resDataList);
+                    dataManager.subscribe(subscribeKey, channelId, resDataList -> {
+                        log.info("subscribe accept() {} -> {} 데이터 구독 발행된 데이터: {}", channelId, subscribeKey, resDataList);
 
                         // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
                         UserRequest resData = UserRequest.builder()
                                 .status(Status.RD)
-                                .sensorCnt(firstRes.getSensorCnt())
+                                .sensorCnt(resDataList.size())
                                 .resDataList(resDataList)
                                 .build();
 
-                        log.info("endoer전 응답하는 데이터: {}", resData);
-
                         ctx.writeAndFlush(resData);
 
-//                        resDataList.clear();
-                        log.info("응답 후, resdDataList.size(): {}", resDataList.size());
                     });
+
+                    log.info("구독 등록 완료: {}", subscribeKey);
                 }
 
                 case ST -> {
                     log.info(" Reqeust [{}] start", currentChannel.getStatus());
+
+//                    dataManager.shutdownExecutors(); // ExecutorService 인스턴스를 종료
                 }
                 default -> throw new IllegalStateException("Unexpected value: " + currentChannel.getStatus());
             }

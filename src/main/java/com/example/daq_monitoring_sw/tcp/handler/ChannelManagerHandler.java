@@ -2,6 +2,7 @@ package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.Status;
+import com.example.daq_monitoring_sw.tcp.pub_sub.DataManager;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import com.example.daq_monitoring_sw.web.service.WebChannelEventService;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -28,6 +29,7 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     private final WebChannelEventService webChannelEventService;
 
     private final ChannelRepository channelRepository;
+    private final DataManager dataManager;
 
 
     // 채널 활성화 시 호출
@@ -46,17 +48,22 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
         String daqId = daqCenter.getDaqId();
         String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
 
-        if (!channelId.isEmpty()){
-            channelRepository.removeChannel(channelId);
+        log.info("channel status: {}", daqCenter.getStatus());
+
+        // 사용자 상태 확인 (예: RD, RS, 또는 RQ 중 하나일 때만 구독 해제)
+        if (daqCenter.getStatus().equals(Status.RD) || daqCenter.getStatus().equals(Status.RS) || daqCenter.getStatus().equals(Status.RQ)) {
+            dataManager.unSubscribe(daqId, channelId);
+            dataManager.shutdownExecutors();
         }
-        if (!daqId.isEmpty()) {
-            channelRepository.removeChannel(daqId);
-        }
+
+//        if (!channelId.isEmpty()) {
+//            channelRepository.removeChannel(channelId);
+//        }
 
         log.info("==================================== Client DisConnected: {} ====================================", channelId);
-
         // 채널 비활성화 정보 웹 서버에 전송
-//        webChannelEventService.sendDaqCenterInfo(daqCenter);
+        // webChannelEventService.sendDaqCenterInfo(daqCenter);
+
 
     }
 

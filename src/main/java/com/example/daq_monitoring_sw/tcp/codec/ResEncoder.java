@@ -27,7 +27,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserRequest res, ByteBuf out) throws Exception {
 
-        log.info("encode start res: {}", res);
+        log.info(">>>>>>>>>>>>>>>>> encode start res: {}", res);
         DaqCenter daqcenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         Status currentStatus = res.getStatus();
 
@@ -104,7 +104,9 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
         // etx
         out.writeByte(ProtocolState.ETX.getValue());
 
+        log.info("====================================================================================================");
         log.info("Encoded Data: {}", out.toString(StandardCharsets.UTF_8));
+        log.info("====================================================================================================");
 
         ctx.writeAndFlush(out);
 
