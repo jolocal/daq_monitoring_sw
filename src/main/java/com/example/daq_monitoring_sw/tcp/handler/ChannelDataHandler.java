@@ -88,7 +88,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     log.info("subscribeKey: {}", subscribeKey);
 
                     dataManager.subscribe(subscribeKey, resDataList -> {
-                        log.info("subscribe key: {} , datas: {}", subscribeKey, resDataList);
+                        log.info("subscribe accept() -> {} 데이터 구독 발행된 데이터: {}", subscribeKey, resDataList);
 
                         // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
                         UserRequest resData = UserRequest.builder()
@@ -97,7 +97,12 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                                 .resDataList(resDataList)
                                 .build();
 
+                        log.info("endoer전 응답하는 데이터: {}", resData);
+
                         ctx.writeAndFlush(resData);
+
+//                        resDataList.clear();
+                        log.info("응답 후, resdDataList.size(): {}", resDataList.size());
                     });
                 }
 

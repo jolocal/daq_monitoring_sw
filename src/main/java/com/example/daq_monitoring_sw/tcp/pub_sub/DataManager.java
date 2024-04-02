@@ -22,7 +22,6 @@ public class DataManager {
 
     // 메시지 처리 큐
     private final Queue<UserRequest> dataQueue = new ConcurrentLinkedQueue<>();
-
     private final Map<String, Consumer<List<String>>> subscribers = new ConcurrentHashMap<String, Consumer<List<String>>>(); // channelId,
 
 
@@ -34,13 +33,14 @@ public class DataManager {
 
         // 큐에서 데이터 처리
         if (!dataQueue.isEmpty()) {
-            UserRequest peek = dataQueue.peek();
-            String daqId = peek.getDaqId();
-            List<String> sensorIdsOrder = peek.getSensorIdsOrder();
-            Map<String, String> parsedSensorData = peek.getParsedSensorData();
+//            UserRequest peek = dataQueue.peek();
+            UserRequest poll = dataQueue.poll();
+            String daqId = poll.getDaqId();
+            List<String> sensorIdsOrder = poll.getSensorIdsOrder();
+            Map<String, String> parsedSensorData = poll.getParsedSensorData();
 
             // 데이터 리스트 생성
-            List<String> resDataList = new ArrayList<>();
+             List<String> resDataList = new ArrayList<>();
 
             for (String sensorId : sensorIdsOrder) {
                 if (parsedSensorData.containsKey(sensorId)) {
@@ -50,11 +50,9 @@ public class DataManager {
             }
             log.info("[writeData] daqId: {} sensorId: {} dataValue: {}", daqId, sensorIdsOrder, resDataList);
 
-            //데이터 발행
             publishData(daqId, resDataList);
 
         }
-
 
       /*  while ((userRequest = dataQueue.peek()) != null) { // 큐에서 데이터를 제거하지 않음
 //        while ((userRequest = dataQueue.poll()) != null) {
@@ -86,14 +84,13 @@ public class DataManager {
         if (subscribers.containsKey(key)) {
             log.info("데이터 발행: {} 채널에 {} 데이터 발행", key, resDataList);
             subscribers.get(key).accept(resDataList);
-
-            // 발행한 데이터 삭제       }
         }
     }
 
     public void subscribe(String subscribeKey, Consumer<List<String>> consumer) {
-        subscribers.put(subscribeKey, consumer);
+        subscribers.put(subscribeKey,consumer);
         log.info("{} 채널 구독자 등록, 현재 구독자 수: {}", subscribeKey, subscribers.size());
 
     }
+
 }
