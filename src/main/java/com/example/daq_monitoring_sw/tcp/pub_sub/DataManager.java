@@ -137,7 +137,7 @@ public class DataManager {
 
     public void unSubscribe(String subscribeKey, String channelId){
 
-        // 수정후 : 구독자 목록에서 특정 channelId에 해당하는 사용자를 제거
+        // TODO: 수정후 : 구독자 목록에서 특정 channelId에 해당하는 사용자를 제거
         if (subscribers.containsKey(subscribeKey)) {
             List<Subscriber> subscriberList = subscribers.get(subscribeKey);
 
