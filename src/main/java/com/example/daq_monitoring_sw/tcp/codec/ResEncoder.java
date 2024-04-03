@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Queue;
 
 import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
@@ -75,7 +76,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
                 String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
                 body.writeBytes(sensorCnt_rd_str.getBytes(StandardCharsets.UTF_8));
 
-                List<String> resDataList = res.getResDataList();
+                Queue<String> resDataList = res.getResDataList();
                 for (String resData : resDataList){
                     byte[] dataBytes  = resData.getBytes(StandardCharsets.UTF_8);
                     body.writeBytes(dataBytes);
@@ -104,8 +105,8 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
         // etx
         out.writeByte(ProtocolState.ETX.getValue());
 
-        log.info("====================================================================================================");
-        log.info("Encoded Data: {}", out.toString(StandardCharsets.UTF_8));
+        log.info("==================================================================================================== \n");
+        log.info("Encoded Data: {}  \n ", out.toString(StandardCharsets.UTF_8));
         log.info("====================================================================================================");
 
         ctx.writeAndFlush(out);

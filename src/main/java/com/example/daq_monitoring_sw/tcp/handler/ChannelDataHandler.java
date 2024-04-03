@@ -27,14 +27,8 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 @Sharable
 public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest> {
 
-    private final ScheduledDataService scheduledDataService;
-    private final DataService dataService;
     private final ChannelRepository channelRepository;
-    private final DataPublisher dataPublisher;
     private final DataManager dataManager;
-
-    // 각 채널과 그에 대응하는 리스너 관리
-//    private final ConcurrentHashMap<String, DataEventListener> listenerGroup = new ConcurrentHashMap<>();
 
 
     /* 예외 발생시 클라이언트와의 연결을 닫고 예외정보 출력 */
@@ -44,6 +38,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
         cause.printStackTrace(); // 네트워크 또는 처리 중 예외 발생 시 호출
     }
 
+    /* 서버는 들어오는 데이터를 하나의 패킷으로 처리하고 있으며, 각 파이프라인은 독립적으로 수행되고 있는 것으로 보입니다. 이러한 동작은 Netty의 특징과 일치합니다. */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UserRequest userReq) throws Exception {
 
@@ -56,9 +51,6 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 }
 
                 case WD -> {
-                    /* 데이터 PUB */
-                    // daqId:sensorId
-                    log.info("[WD daqcenter info: {}]", userReq);
                     dataManager.writeData(userReq);
                 }
 
@@ -69,7 +61,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
                     // WD 사용자 확인 (존재하지 않더라도 리스너 등록)
                     if (wdActiveChannel.isEmpty()) {
-                        log.info(">>>>>>>>>>>>>>>>> 활성화된 WD 채널이 없습니다. 리스너 등록을 진행합니다.");
+                        log.info("활성화된 WD 채널이 없습니다. 리스너 등록을 진행합니다.");
                     } else {
                         // WD 사용자가 존재할 경우의 추가 로직
                         // RS: 1차응답
@@ -94,6 +86,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                         // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
                         UserRequest resData = UserRequest.builder()
                                 .status(Status.RD)
+                                .readTo(subscribeKey)
                                 .sensorCnt(resDataList.size())
                                 .resDataList(resDataList)
                                 .build();
@@ -101,20 +94,19 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                         ctx.writeAndFlush(resData);
 
                     });
-
-                    log.info("구독 등록 완료: {}", subscribeKey);
                 }
 
                 case ST -> {
-                    log.info(" Reqeust [{}] start", currentChannel.getStatus());
+                    log.info("==================================== Reqeust [{}] start ====================================", currentChannel.getStatus());
+                    String daqId = currentChannel.getDaqId();
+                    dataManager.handleSTRequest(daqId);
 
-//                    dataManager.shutdownExecutors(); // ExecutorService 인스턴스를 종료
                 }
                 default -> throw new IllegalStateException("Unexpected value: " + currentChannel.getStatus());
             }
 
         } else {
-            throw new IllegalStateException("저장된 채널 정보가 없습니다.");
+            throw new IllegalStateException("NETTY 채널에 저장된 사용자 정보가 없습니다.");
         }
 
     }
@@ -128,96 +120,4 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 .sensorIdsOrder(currentDaqcenter.getSensorIdsOrder())
                 .build();
     }
-
-
-
-//    // RQ요청에 대응하는 리스너 생성, ( WD 데이터가 업데이트될 때마다 호출되며, 변경된 데이터를 클라이언트에게 전송 )
-//    private DataEventListener createDataEventListener(ChannelHandlerContext ctx, UserRequest lastRes) {
-//        return collectedData -> {
-//            lastRes.setStatus(Status.RD);
-//            lastRes.setParsedSensorData(collectedData);
-//
-///*            UserRequest res = UserRequest.builder()
-//                    .status(Status.RD)
-//                    .sensorCnt(firstRes.getSensorCnt())
-//                    .sensorIdsOrder(firstRes.getSensorIdsOrder())
-//                    .parsedSensorData(collectedData)
-//                    .build();*/
-//
-//            log.info("onDataRecevied res: {}", lastRes);
-//
-//            ctx.writeAndFlush(lastRes);
-//        };
-//    }
-
 }
-
-//                        listenerGroup.put(userReq.getChannelId(), dataEventListener);
-//                        String rq_daqId = daqCenter.getDaqId();
-//                        listenerGroup.put(rq_daqId, dataEventListener);
-//                        dataService.subscribeToData(rq_daqId, dataEventListener);
-
-//                    // daqcenter 확인
-//                    Optional<DaqCenter> optionalDaqCenter = channelRepository.getChannelDaqCenter(userReq.getDaqId());
-//                    if (optionalDaqCenter.isPresent()) {
-//                        DaqCenter foundDaqCenter = optionalDaqCenter.get();
-//                        log.info("현재 접속된 사용자 정보: {}", foundDaqCenter);
-//
-//                        // 리스너 생성 및 등록
-//                        DataEventListener dataEventListener = new DataEventListener() {
-//                            // 2차 응답
-//                            @Override
-//                            public void onDataReceived(Map<String, String> collectedData) {
-//                                UserRequest res = UserRequest.builder()
-//                                        .status(Status.RD)
-//                                        .parsedSensorData(collectedData)
-//                                        .build();
-//                                log.info("Response for data received");
-//                                ctx.writeAndFlush(res);
-//                            }
-//                        };
-//
-//                        listenerGroup.put(userReq.getDaqId(), dataEventListener);
-//                        // 데이터 구독
-//                        dataService.subscribeToData(userReq, dataEventListener);
-//
-//                        // 1차 응답
-//                        log.info("First response: {}", userReq);
-//                        UserRequest firstRes = UserRequest.builder()
-//                                .status(Status.RS)
-//                                .daqId(foundDaqCenter.getDaqId())
-//                                .sensorCnt(foundDaqCenter.getSensorCnt())
-//                                .sensorIdsOrder(foundDaqCenter.getSensorIdsOrder())
-//                                .build();
-//
-//                        ctx.writeAndFlush(firstRes);
-//
-//                    } else {
-//                        log.info("DaqCenter not found for ID: {}", userReq.getDaqId());
-//                    }
-
-/*
-                    // TEMP 데이터 보내기 //
-                    UserRequest checkUser = scheduledDataService.checkUser(ctx, userReq);
-                    if (checkUser != null) {
-                        daqCenter.setStatus(Status.RS);
-                        log.info(" RQ Reqeust -> [{}] Change", daqCenter.getStatus());
-
-                        ctx.writeAndFlush(checkUser);
-
-                        daqCenter.setStatus(Status.RD);
-
-                        // 비동기 실행
-                        CompletableFuture<Void> future = scheduledDataService.startDataTransmission(ctx, userReq);
-
-                        future.thenRun(() ->
-                                        log.info("Data transmission completed successfully."))
-                                .exceptionally(ex -> {
-                                    log.error("An error occurred during data transmission: ", ex);
-                                    return null;
-                                });
-                    }
-                    */
-
-//                    ST 요청시
-//                    scheduledDataService.handleStopRequest(ctx);

@@ -46,21 +46,24 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         String daqId = daqCenter.getDaqId();
+        String readTo = daqCenter.getReadTo();
         String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
+
 
         log.info("channel status: {}", daqCenter.getStatus());
 
-        // 사용자 상태 확인 (예: RD, RS, 또는 RQ 중 하나일 때만 구독 해제)
-        if (daqCenter.getStatus().equals(Status.RD) || daqCenter.getStatus().equals(Status.RS) || daqCenter.getStatus().equals(Status.RQ)) {
-            dataManager.unSubscribe(daqId, channelId);
-            dataManager.shutdownExecutors();
-        }
 
 //        if (!channelId.isEmpty()) {
 //            channelRepository.removeChannel(channelId);
 //        }
 
         log.info("==================================== Client DisConnected: {} ====================================", channelId);
+
+        // 사용자 상태 확인 (예: RD, RS, 또는 RQ 중 하나일 때만 구독 해제)
+        if (daqCenter.getStatus().equals(Status.RD) || daqCenter.getStatus().equals(Status.RS) || daqCenter.getStatus().equals(Status.RQ)) {
+            dataManager.unSubscribe(readTo, channelId);
+        }
+
         // 채널 비활성화 정보 웹 서버에 전송
         // webChannelEventService.sendDaqCenterInfo(daqCenter);
 

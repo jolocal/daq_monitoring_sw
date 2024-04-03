@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 @Data
 @AllArgsConstructor
@@ -19,7 +20,7 @@ public class UserRequest {
     // read
     private String channelId;
     private String readTo;
-    private List<String> resDataList;
+    private Queue<String> resDataList;
 
     // common
     private Integer sensorCnt;
