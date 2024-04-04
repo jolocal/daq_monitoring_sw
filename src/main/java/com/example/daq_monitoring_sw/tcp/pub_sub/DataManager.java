@@ -36,7 +36,7 @@ public class DataManager {
 
 
     // 1:N + 동시성관리
-    public void writeData(UserRequest userRequest){
+    public void writeData(UserRequest userRequest) {
         String daqId = userRequest.getDaqId();
 
         // 고정된 크기의 스레드 풀 설정
@@ -46,8 +46,27 @@ public class DataManager {
         executorServices.computeIfAbsent(daqId, k -> Executors.newFixedThreadPool(8));
 
         ExecutorService executorService = executorServices.get(daqId);
-        log.info("스레드 생성 - {}",executorService);
+        log.info("스레드 생성 - {}", executorService);
 
+        CompletableFuture.supplyAsync(() -> processData(userRequest), executorService)
+                .thenAccept(processData -> {
+                    log.info("[ 비동기 데이터 처리 ] - 센서 타입별 데이터 파싱 완료: {}", processData);
+                    // 데이터 발행
+                    publishData(daqId, processData);
+                }).exceptionally(e -> {
+                    log.info("[ 비동기 데이터 처리 중 예외 발생 ] : {}", e.getMessage());
+                    return null;
+                })
+                .whenComplete((result, throwable) -> {
+                    if (throwable != null) {
+                        // 예외가 발생한 경우의 추가 처리
+                        log.error("[ 비동기 작업 완료 후 예외 처리 ]", throwable);
+                    } else {
+                        // 성공적으로 완료된 경우의 추가 처리
+                        log.info("[ 비동기 작업 성공적으로 완료 ]");
+                    }
+                });
+/*
         // 데이터 처리를 비동기적으로 수행
         executorService.submit(() -> {
             Queue<String> processedData = processData(userRequest);
@@ -55,18 +74,19 @@ public class DataManager {
             // 데이터 발행
             publishData(daqId, processedData);
         });
+*/
     }
 
 
-    private Queue<String> processData(UserRequest userRequest){
+    private Queue<String> processData(UserRequest userRequest) {
         String daqId = userRequest.getDaqId();
         List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
         Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
 
         Queue<String> newSensorData = new ConcurrentLinkedQueue<>();
 
-        for (String sensorId : sensorIdsOrder){
-            if (parsedSensorData.containsKey(sensorId)){
+        for (String sensorId : sensorIdsOrder) {
+            if (parsedSensorData.containsKey(sensorId)) {
                 String dataValue = parsedSensorData.get(sensorId);
                 newSensorData.add(dataValue);
             }
@@ -77,7 +97,6 @@ public class DataManager {
     }
 
 
-
     // 데이터 발행
     private void publishData(String key, Queue<String> resDataList) {
         if (subscribers.containsKey(key)) {
@@ -85,11 +104,11 @@ public class DataManager {
                 subscriber.getConsumer().accept(resDataList);
             }
         }
-        log.info("[{}] 채널 구독자에게 데이터 발행 완료 - 구독자 리스트: {}",key, subscribers.get(key));
+        log.info("[{}] 채널 구독자에게 데이터 발행 완료 - 구독자 리스트: {}", key, subscribers.get(key));
     }
 
     public void subscribe(String subscribeKey, String channelId, Consumer<Queue<String>> consumer) {
-        Subscriber newSubscriber = new Subscriber(consumer,channelId);
+        Subscriber newSubscriber = new Subscriber(consumer, channelId);
         subscribers.computeIfAbsent(subscribeKey, k -> new CopyOnWriteArrayList<>()).add(newSubscriber);
 
         log.info("새로운 구독자: {}", newSubscriber.toString());
@@ -98,12 +117,12 @@ public class DataManager {
 
     }
 
-    public void unSubscribe(String subscribeKey, String channelId){
+    public void unSubscribe(String subscribeKey, String channelId) {
         try {
 
             log.info("subscribeKey: {}, channelId: {} ", subscribeKey, channelId);
 
-            if (subscribers.containsKey(subscribeKey)){
+            if (subscribers.containsKey(subscribeKey)) {
                 List<Subscriber> subscriberList = subscribers.get(subscribeKey);
                 log.info("{} 구독자 리스트: {}", subscribeKey, subscriberList);
 
@@ -121,8 +140,8 @@ public class DataManager {
                 log.info("[{}] 채널에 대한 구독자가 존재하지 않습니다.", subscribeKey);
             }
         } catch (Exception e) {
-        log.info("구독자 해제 오류: {}", e.getMessage());
-    }
+            log.info("구독자 해제 오류: {}", e.getMessage());
+        }
     }
 
     public void handleSTRequest(String daqId) {

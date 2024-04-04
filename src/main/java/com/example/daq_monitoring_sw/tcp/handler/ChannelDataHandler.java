@@ -34,8 +34,9 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
     /* 예외 발생시 클라이언트와의 연결을 닫고 예외정보 출력 */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ctx.close(); // 예외 발생 시 채널 닫기
         cause.printStackTrace(); // 네트워크 또는 처리 중 예외 발생 시 호출
+        log.error("error: {}", cause.getMessage());
+        ctx.close(); // 예외 발생 시 채널 닫기
     }
 
     /* 서버는 들어오는 데이터를 하나의 패킷으로 처리하고 있으며, 각 파이프라인은 독립적으로 수행되고 있는 것으로 보입니다. 이러한 동작은 Netty의 특징과 일치합니다. */
