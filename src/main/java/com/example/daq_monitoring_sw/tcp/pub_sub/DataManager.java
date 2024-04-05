@@ -17,22 +17,20 @@ import java.util.function.Consumer;
 @Component
 public class DataManager {
 
-    // DB용 dataMap
-    private final Map<String, String> dataMap = new ConcurrentHashMap<>(); // daqId:PR01 = +000.0
-
-
-    // 메시지 처리 큐
-    // private final Queue<UserRequest> dataQueue = new ConcurrentLinkedQueue<>();
-//    private final Map<String, List<Consumer<List<String>>>> subscribers = new ConcurrentHashMap<String, Consumer<List<String>>>(); // channelId,
     private final Map<String, List<Subscriber>> subscribers = new ConcurrentHashMap<>();
 
     // N:N 데이터 저장 및 발행
     private final Map<String, ExecutorService> executorServices = new ConcurrentHashMap<>(); // 각 DAQID별로 데이터를 처리하기 위한 스레드 풀
-    private final Map<String, ConcurrentLinkedQueue<String>> dataStorage = new ConcurrentHashMap<>(); // 각 DAQID별 데이터 저장소
+    private final Map<String, ConcurrentLinkedQueue<String>> userSensorDataQueues  = new ConcurrentHashMap<>(); // 각 DAQID별 데이터 저장소
 
+    /*
+    큐 리소스 관리
 
-    // 비동기 처리시 패킷 순서가 보장되지 않기 때문에
-    private final AtomicLong sequence = new AtomicLong(0);
+    실시간 데이터 처리 시스템에서는 메모리 용량과 처리 속도를 기반으로 한 유연한 크기 조절 전략을 사용하는 것이 좋습니다.
+    시작점으로는 시스템의 메모리 한계의 일부분을 큐 크기로 설정하고, 성능 테스트를 통해 조정하는 것을 권장합니다.
+    예를 들어, 시스템 메모리의 10-20%를 초기 큐 크기로 설정한 후, 테스트와 모니터링을 통해 이 값을 조정
+    */
+    private static final int MAX_QUEUE_SIZE = 1000;
 
 
     // 1:N + 동시성관리
@@ -66,19 +64,53 @@ public class DataManager {
                         log.info("[ 비동기 작업 성공적으로 완료 ]");
                     }
                 });
-/*
-        // 데이터 처리를 비동기적으로 수행
-        executorService.submit(() -> {
-            Queue<String> processedData = processData(userRequest);
-            log.info("[ 비동기 데이터 처리 ] - 센서 타입별 데이터 파싱 완료: {}", processedData);
-            // 데이터 발행
-            publishData(daqId, processedData);
-        });
-*/
+    }
+
+    private Queue<String> processData(UserRequest userRequest) {
+        String daqId = userRequest.getDaqId();
+        List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
+        Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
+
+        // 사용자별 데이터 큐 초기화 또는 가져오기
+        ConcurrentLinkedQueue<String> sensorDataQueue = userSensorDataQueues.computeIfAbsent(daqId, k -> new ConcurrentLinkedQueue<>());
+
+        for (String sensorId : sensorIdsOrder) {
+            if (parsedSensorData.containsKey(sensorId)) {
+                // 큐의 크기 제한하여 메모리 사용량 관리 큐 크기 검사 -> 초과시 오래된 데이터 제거
+                if (sensorDataQueue.size() >= MAX_QUEUE_SIZE){
+                    sensorDataQueue.poll(); // 가장 오래된 요소 제거
+                }
+                String dataValue = parsedSensorData.get(sensorId);
+                sensorDataQueue.add(dataValue);
+            }
+        }
+
+        log.info("ProcessData newSensorData Queue size: {}", sensorDataQueue.size());
+
+        return sensorDataQueue;
+
+    }
+
+    // 데이터 발행
+    private void publishData(String key, Queue<String> resDataList) {
+        if (subscribers.containsKey(key)) {
+            for (Subscriber subscriber : subscribers.get(key)) {
+                subscriber.getConsumer().accept(resDataList);
+            }
+        }
+
+
+
+        // TODO: 전송 후 큐 비우기
+        log.info("[ Before ] sensorData Queue Clear: {}", resDataList.size());
+        resDataList.clear();
+        log.info("[ After ] sensorData Queue Clear: {}", resDataList.size());
+
+        log.info("[{}] 채널 구독자에게 데이터 발행 완료 - 구독자 리스트: {}", key, subscribers.get(key));
     }
 
 
-    private Queue<String> processData(UserRequest userRequest) {
+/*    private Queue<String> processData(UserRequest userRequest) {
         String daqId = userRequest.getDaqId();
         List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
         Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
@@ -91,20 +123,18 @@ public class DataManager {
                 newSensorData.add(dataValue);
             }
         }
+        log.info("ProcessData newSensorData Queue size: {}", newSensorData.size());
+
+        // 리소스 정리 -> 명시적 null 선언 -> 가비지컬렉터가 더 빠르게 메모리 회수를 함
+        newSensorData = null;
+
         return newSensorData;
         // 데이터 처리 로직 추가 (예: 데이터 저장, 로깅, 기타)
 
-    }
+    }*/
 
 
-    // 데이터 발행
-    private void publishData(String key, Queue<String> resDataList) {
-        if (subscribers.containsKey(key)) {
-            for (Subscriber subscriber : subscribers.get(key)) {
-                subscriber.getConsumer().accept(resDataList);
-            }
-        }
-        log.info("[{}] 채널 구독자에게 데이터 발행 완료 - 구독자 리스트: {}", key, subscribers.get(key));
+    private void sendDataToKafka(String key, Queue<String> resDataList) {
     }
 
     public void subscribe(String subscribeKey, String channelId, Consumer<Queue<String>> consumer) {
