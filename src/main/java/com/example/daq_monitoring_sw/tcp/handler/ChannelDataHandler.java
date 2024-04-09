@@ -84,16 +84,23 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     dataManager.subscribe(subscribeKey, channelId, resDataList -> {
                         log.info("subscribe accept() {} -> {} 데이터 구독 발행된 데이터: {}", channelId, subscribeKey, resDataList);
 
-                        // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
-                        UserRequest resData = UserRequest.builder()
-                                .status(Status.RD)
-                                .readTo(subscribeKey)
-                                .sensorCnt(resDataList.size())
-                                .resDataList(resDataList)
-                                .build();
+                        try{
+                            // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
+                            UserRequest resData = UserRequest.builder()
+                                    .status(Status.RD)
+                                    .readTo(subscribeKey)
+//                                    .sensorCnt(resDataList)
+//                                    .resDataList(resDataList)
+                                    .build();
 
-                        ctx.writeAndFlush(resData);
+                            log.info("구독자에게 데이터가 잘 들어왔니? resData: {}", resData);
 
+                            ctx.writeAndFlush(resData);
+                        } finally {
+//                            log.info("resDataList size: {}", resDataList.size());
+                            // 처리 완료 후 resDataList의 참조 해제
+//                            resDataList.clear();
+                        }
                     });
                 }
 

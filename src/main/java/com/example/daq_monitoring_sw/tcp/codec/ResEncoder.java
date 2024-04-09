@@ -78,6 +78,7 @@ public class ResEncoder extends MessageToByteEncoder<UserRequest> {
 
                 Queue<String> resDataList = res.getResDataList();
                 for (String resData : resDataList){
+                    log.info("resencoder: {}", resData);
                     byte[] dataBytes  = resData.getBytes(StandardCharsets.UTF_8);
                     body.writeBytes(dataBytes);
                 }

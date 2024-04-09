@@ -17,12 +17,6 @@ import java.util.function.Consumer;
 @Component
 public class DataManager {
 
-    private final Map<String, List<Subscriber>> subscribers = new ConcurrentHashMap<>();
-
-    // N:N 데이터 저장 및 발행
-    private final Map<String, ExecutorService> executorServices = new ConcurrentHashMap<>(); // 각 DAQID별로 데이터를 처리하기 위한 스레드 풀
-    private final Map<String, ConcurrentLinkedQueue<String>> userSensorDataQueues  = new ConcurrentHashMap<>(); // 각 DAQID별 데이터 저장소
-
     /*
     큐 리소스 관리
 
@@ -30,8 +24,12 @@ public class DataManager {
     시작점으로는 시스템의 메모리 한계의 일부분을 큐 크기로 설정하고, 성능 테스트를 통해 조정하는 것을 권장합니다.
     예를 들어, 시스템 메모리의 10-20%를 초기 큐 크기로 설정한 후, 테스트와 모니터링을 통해 이 값을 조정
     */
-    private static final int MAX_QUEUE_SIZE = 1000;
+    private static final int MAX_QUEUE_SIZE = 6500;
+    private final Map<String, List<Subscriber>> subscribers = new ConcurrentHashMap<>();
+    // N:N 데이터 저장 및 발행
+    private final Map<String, ExecutorService> executorServices = new ConcurrentHashMap<>(); // 각 DAQID별로 데이터를 처리하기 위한 스레드 풀
 
+    private final Map<String, ConcurrentLinkedQueue<ConcurrentLinkedQueue<String>>> dataQueue = new ConcurrentHashMap<>();
 
     // 1:N + 동시성관리
     public void writeData(UserRequest userRequest) {
@@ -49,11 +47,16 @@ public class DataManager {
         CompletableFuture.supplyAsync(() -> processData(userRequest), executorService)
                 .thenAccept(processData -> {
                     log.info("[ 비동기 데이터 처리 ] - 센서 타입별 데이터 파싱 완료: {}", processData);
+
+                    log.info("[2] 데이터 발행");
                     // 데이터 발행
-                    publishData(daqId, processData);
+                    publishData(daqId,processData);
+
+
                 }).exceptionally(e -> {
-                    log.info("[ 비동기 데이터 처리 중 예외 발생 ] : {}", e.getMessage());
+                    log.error("[ 비동기 데이터 처리 중 예외 발생 ] : {}", e.getMessage());
                     return null;
+
                 })
                 .whenComplete((result, throwable) -> {
                     if (throwable != null) {
@@ -63,81 +66,74 @@ public class DataManager {
                         // 성공적으로 완료된 경우의 추가 처리
                         log.info("[ 비동기 작업 성공적으로 완료 ]");
                     }
+
+                });
+
+        // kafka 전송을 위한 독립적인 비동기 작업
+        CompletableFuture.runAsync(() -> {
+                    // kafka 전송 로직(userRequest 기반으로 kafka데이터 구성 및 전송)
+                    // sendToKafka(kafkaDatas);
+                }, executorService)
+                .exceptionally(kafkaException -> {
+                    log.error(" [ Kafka 전송 중 예외 발생 ] : {}", kafkaException.getMessage());
+                    return null;
                 });
     }
 
-    private Queue<String> processData(UserRequest userRequest) {
+    private List<String> processData(UserRequest userRequest) {
         String daqId = userRequest.getDaqId();
         List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
         Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
 
-        // 사용자별 데이터 큐 초기화 또는 가져오기
-        ConcurrentLinkedQueue<String> sensorDataQueue = userSensorDataQueues.computeIfAbsent(daqId, k -> new ConcurrentLinkedQueue<>());
+        List<String> newSensorData = new ArrayList<>();
+
+//        ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
 
         for (String sensorId : sensorIdsOrder) {
             if (parsedSensorData.containsKey(sensorId)) {
-                // 큐의 크기 제한하여 메모리 사용량 관리 큐 크기 검사 -> 초과시 오래된 데이터 제거
-                if (sensorDataQueue.size() >= MAX_QUEUE_SIZE){
-                    sensorDataQueue.poll(); // 가장 오래된 요소 제거
-                }
                 String dataValue = parsedSensorData.get(sensorId);
-                sensorDataQueue.add(dataValue);
+                 newSensorData.add(dataValue);
+//                queue.add(dataValue);
             }
         }
+//        dataQueue.computeIfAbsent(daqId, k -> new ConcurrentLinkedQueue<>()).add(queue);
+//        log.info("processData queue: {}", queue.toString());
+        return newSensorData;
+//        return queue;
+    }
 
-        log.info("ProcessData newSensorData Queue size: {}", sensorDataQueue.size());
 
-        return sensorDataQueue;
+    // 리스너에게 데이터 발행
+    private void publishData(String daqId,List<String> resDataList) {
+        if (subscribers.containsKey(daqId)) {
+            for (Subscriber subscriber : subscribers.get(daqId)) {
+                subscriber.getConsumer().accept(resDataList);
+            }
+        }
+        log.info("[publishData] resDataList Queue size: {}", resDataList.size());
+//        ConcurrentLinkedQueue<ConcurrentLinkedQueue<String>> queue = dataQueue.get(daqId);
+//        log.info("publishData queue: {}",queue.toString());
+//
+//        if (queue != null) {
+//            subscribers.get(daqId).forEach(subscriber -> subscriber.getConsumer().accept(queue));
+//            log.info("[publishData] 발행된 데이터: {}", queue);
+//
+//        }
+        log.info("[3] 발행 완료");
 
     }
 
-    // 데이터 발행
-    private void publishData(String key, Queue<String> resDataList) {
+   /* private void publishData(String key, List<String> resDataList) {
         if (subscribers.containsKey(key)) {
             for (Subscriber subscriber : subscribers.get(key)) {
                 subscriber.getConsumer().accept(resDataList);
             }
         }
-
-
-
-        // TODO: 전송 후 큐 비우기
-        log.info("[ Before ] sensorData Queue Clear: {}", resDataList.size());
-        resDataList.clear();
-        log.info("[ After ] sensorData Queue Clear: {}", resDataList.size());
-
-        log.info("[{}] 채널 구독자에게 데이터 발행 완료 - 구독자 리스트: {}", key, subscribers.get(key));
-    }
-
-
-/*    private Queue<String> processData(UserRequest userRequest) {
-        String daqId = userRequest.getDaqId();
-        List<String> sensorIdsOrder = userRequest.getSensorIdsOrder();
-        Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
-
-        Queue<String> newSensorData = new ConcurrentLinkedQueue<>();
-
-        for (String sensorId : sensorIdsOrder) {
-            if (parsedSensorData.containsKey(sensorId)) {
-                String dataValue = parsedSensorData.get(sensorId);
-                newSensorData.add(dataValue);
-            }
-        }
-        log.info("ProcessData newSensorData Queue size: {}", newSensorData.size());
-
-        // 리소스 정리 -> 명시적 null 선언 -> 가비지컬렉터가 더 빠르게 메모리 회수를 함
-        newSensorData = null;
-
-        return newSensorData;
-        // 데이터 처리 로직 추가 (예: 데이터 저장, 로깅, 기타)
-
+        log.info("[publishData] resDataList Queue size: {}", resDataList.size());
     }*/
 
 
-    private void sendDataToKafka(String key, Queue<String> resDataList) {
-    }
-
-    public void subscribe(String subscribeKey, String channelId, Consumer<Queue<String>> consumer) {
+    public void subscribe(String subscribeKey, String channelId, Consumer<List<String>> consumer) {
         Subscriber newSubscriber = new Subscriber(consumer, channelId);
         subscribers.computeIfAbsent(subscribeKey, k -> new CopyOnWriteArrayList<>()).add(newSubscriber);
 
