@@ -11,20 +11,15 @@ import java.util.Queue;
 @Data
 @AllArgsConstructor
 @Builder
-public class UserRequest {
+public class UserResponse {
 
-    // write
-    private Status status;
     private String daqId;
-
-    // read
+    private Status status;
     private String channelId;
     private String readTo;
-    private List<String> resDataList;
+    private Queue<String> resDataList;
 
-    // common
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
-    private Map<String, String> parsedSensorData; // TP01:+000.0
+    private Map<String,String> parsedSensorData;
 }
-

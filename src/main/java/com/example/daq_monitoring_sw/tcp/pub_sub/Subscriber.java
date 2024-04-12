@@ -11,6 +11,6 @@ import java.util.function.Consumer;
 @Data
 @AllArgsConstructor
 public class Subscriber {
-    private Consumer<List<String>> consumer;
+    private Consumer<ConcurrentLinkedQueue<String>> consumer;
     private String channelId;
 }

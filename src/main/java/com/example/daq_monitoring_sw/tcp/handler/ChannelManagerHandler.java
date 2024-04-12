@@ -2,21 +2,15 @@ package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.Status;
-import com.example.daq_monitoring_sw.tcp.pub_sub.DataManager;
+import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataManager;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import com.example.daq_monitoring_sw.web.service.WebChannelEventService;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.AttributeKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
@@ -29,8 +23,8 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     private final WebChannelEventService webChannelEventService;
 
     private final ChannelRepository channelRepository;
-    private final DataManager dataManager;
-
+//    private final DataManager dataManager;
+    private final ProcessingDataManager dataManager;
 
     // 채널 활성화 시 호출
     @Override

@@ -3,11 +3,12 @@ package com.example.daq_monitoring_sw.tcp.handler;
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.Status;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
-import com.example.daq_monitoring_sw.tcp.pub_sub.DataManager;
-import com.example.daq_monitoring_sw.tcp.pub_sub.DataPublisher;
-import com.example.daq_monitoring_sw.tcp.service.DataService;
-import com.example.daq_monitoring_sw.tcp.service.ScheduledDataService;
+import com.example.daq_monitoring_sw.tcp.dto.UserResponse;
+import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataManager;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
@@ -28,8 +30,7 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest> {
 
     private final ChannelRepository channelRepository;
-    private final DataManager dataManager;
-
+    private final ProcessingDataManager dataManager;
 
     /* 예외 발생시 클라이언트와의 연결을 닫고 예외정보 출력 */
     @Override
@@ -39,7 +40,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
         ctx.close(); // 예외 발생 시 채널 닫기
     }
 
-    /* 서버는 들어오는 데이터를 하나의 패킷으로 처리하고 있으며, 각 파이프라인은 독립적으로 수행되고 있는 것으로 보입니다. 이러한 동작은 Netty의 특징과 일치합니다. */
+    /* 서버는 들어오는 데이터를 하나의 패킷으로 처리하고 있으며, 각 파이프라인은 독립적으로 수행되고 있는 것으로 보입니다.*/
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UserRequest userReq) throws Exception {
 
@@ -52,11 +53,13 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 }
 
                 case WD -> {
+//                    dataManager.writeData(userReq);
                     dataManager.writeData(userReq);
                 }
 
                 // 리스너 생성, 데이터 발행 클래스에 등록
                 case RQ -> {
+
                     // wd-channel 확인
                     Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
 
@@ -69,7 +72,8 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                         DaqCenter currentWdDaqcenter = wdActiveChannel.get();
                         log.info("활성화 중인 WD 채널 정보: {}", currentWdDaqcenter);
 
-                        UserRequest firstRes = createFirstRes(currentWdDaqcenter);
+                        UserResponse firstRes = createFirstRes(currentWdDaqcenter);
+
                         ctx.writeAndFlush(firstRes);
                     }
 
@@ -81,34 +85,27 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     String channelId = currentChannel.getChannelId();
                     String subscribeKey = currentChannel.getReadTo();
 
-                    dataManager.subscribe(subscribeKey, channelId, resDataList -> {
-                        log.info("subscribe accept() {} -> {} 데이터 구독 발행된 데이터: {}", channelId, subscribeKey, resDataList);
 
-                        try{
-                            // 여기서 실시간으로 발행된 데이터를 클라이언트에게 전송하는 로직 작성
-                            UserRequest resData = UserRequest.builder()
-                                    .status(Status.RD)
-                                    .readTo(subscribeKey)
-//                                    .sensorCnt(resDataList)
-//                                    .resDataList(resDataList)
-                                    .build();
+                    dataManager.subscribe(subscribeKey, channelId, queue -> {
+                        // buffer.retain();
 
-                            log.info("구독자에게 데이터가 잘 들어왔니? resData: {}", resData);
+                        log.info("[응답 전] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, queue, queue.size());
 
-                            ctx.writeAndFlush(resData);
-                        } finally {
-//                            log.info("resDataList size: {}", resDataList.size());
-                            // 처리 완료 후 resDataList의 참조 해제
-//                            resDataList.clear();
-                        }
+                        UserResponse response = UserResponse.builder()
+                                .status(Status.RD)
+                                .readTo(subscribeKey) //daqId
+                                .sensorCnt(queue.size())
+                                .resDataList(queue)
+                                .build();
+
+                        ctx.writeAndFlush(response);
+
+                        log.info("[응답 후] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, queue, queue.size());
                     });
                 }
-
                 case ST -> {
                     log.info("==================================== Reqeust [{}] start ====================================", currentChannel.getStatus());
                     String daqId = currentChannel.getDaqId();
-                    dataManager.handleSTRequest(daqId);
-
                 }
                 default -> throw new IllegalStateException("Unexpected value: " + currentChannel.getStatus());
             }
@@ -119,13 +116,14 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
     }
 
-    private UserRequest createFirstRes(DaqCenter currentDaqcenter) {
+    private UserResponse createFirstRes(DaqCenter currentDaqcenter) {
         // 1차 응답 생성 로직
-        return UserRequest.builder()
+        return UserResponse.builder()
                 .status(Status.RS)
                 .daqId(currentDaqcenter.getDaqId())
                 .sensorCnt(currentDaqcenter.getSensorCnt())
                 .sensorIdsOrder(currentDaqcenter.getSensorIdsOrder())
-                .build();
+                .build()
+                ;
     }
 }

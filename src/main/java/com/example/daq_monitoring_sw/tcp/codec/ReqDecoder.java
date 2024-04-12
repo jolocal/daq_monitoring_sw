@@ -29,6 +29,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+
         switch (state()) {
             case STX:
                 String stx = readLength(in, 1);
@@ -59,6 +60,8 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                             .sensorIdsOrder(daqCenter.getSensorIdsOrder())
                             .parsedSensorData(daqCenter.getParsedSensorData())
                             .build();
+
+                    log.info("[ReqDecoder] userRequest: {}",userRequest.toString());
 
                     out.add(userRequest);
                 }
@@ -104,15 +107,16 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     List<String> wdSensorIds = currentDaqCenter.getSensorIdsOrder();
 
                     sensorCnt = Integer.parseInt(readLength(in, 2));
+
                     for (int i = 0, sensorIdIndex = 0; i < sensorCnt; i++) {
                         String parsedData = processRawData(in, 5); // 데이터 파싱
                         String sensorId = wdSensorIds.get(i);
 
-                        if (sensorId.startsWith("DU")) {
-                            String additionalData = processRawData(in, 5);
-                            parsedData += additionalData;
-                            i++;
-                        }
+//                        if (sensorId.startsWith("DU")) {
+//                            String additionalData = processRawData(in, 5);
+//                            parsedData += additionalData;
+//                            i++;
+//                        }
                         parsedSensorData.put(sensorId, parsedData); // 파싱된 데이터 저장
                         sensorIdIndex++;
                     }
