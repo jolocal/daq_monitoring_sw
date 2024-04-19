@@ -39,17 +39,11 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
-        String daqId = daqCenter.getDaqId();
         String readTo = daqCenter.getReadTo();
         String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
 
 
         log.info("channel status: {}", daqCenter.getStatus());
-
-
-//        if (!channelId.isEmpty()) {
-//            channelRepository.removeChannel(channelId);
-//        }
 
         log.info("==================================== Client DisConnected: {} ====================================", channelId);
 
@@ -60,7 +54,6 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
 
         // 채널 비활성화 정보 웹 서버에 전송
         // webChannelEventService.sendDaqCenterInfo(daqCenter);
-
 
     }
 

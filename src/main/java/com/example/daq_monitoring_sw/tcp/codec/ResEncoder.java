@@ -24,17 +24,14 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserResponse res, ByteBuf out) throws Exception {
         log.info("Starting encode method for UserResponse: {}", res);
-        DaqCenter daqcenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         Status currentStatus = res.getStatus();
 
         // 본문 데이터 생성
-        ByteBuf body = Unpooled.buffer();
-        log.info("Initial ByteBuf body state: refCnt={}, readableBytes={}", body.refCnt(), body.readableBytes());
+        ByteBuf body = ctx.alloc().buffer();
 
         try {
-
             switch (currentStatus) {
-                case WD:
+/*                case WD:
                     String daqId_wd = res.getDaqId();
                     body.writeBytes(daqId_wd.getBytes(StandardCharsets.UTF_8));
 
@@ -54,8 +51,7 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
                     for (String sensorId : res.getSensorIdsOrder()) {
                         body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
                     }
-                    break;
-
+                    break;*/
                 case RS:
                     String daqId_rs = res.getDaqId();
                     body.writeBytes(daqId_rs.getBytes(StandardCharsets.UTF_8));
@@ -70,14 +66,19 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
                     break;
 
                 case RD:
+                    // 센서갯수
                     int sensorCnt_rd = res.getSensorCnt();
                     String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
                     body.writeBytes(sensorCnt_rd_str.getBytes(StandardCharsets.UTF_8));
 
-                    Queue<String> resDataList = res.getResDataList();
+                    String timeStamp = res.getTimeStamp();
+                    body.writeBytes(timeStamp.getBytes(StandardCharsets.UTF_8));
 
+                    // 센서 데이터를 바이트로 변환하여 body에 쓰기
+                    Queue<String> resDataList = res.getResDataList();
                     for (String resData : resDataList) {
                         byte[] dataBytes = resData.getBytes(StandardCharsets.UTF_8);
+                        log.info("resData: {}", resData);
                         body.writeBytes(dataBytes);
                     }
                     break;
@@ -88,46 +89,30 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
 
             // 헤더 작성
             int packetLength = body.readableBytes() + 6; // STX(1) + length(2) + status(2) + ETX(1)
-            String packetLengthStr = String.format("%02d", packetLength);
+            String packetLengthStr = String.format("%03d", packetLength);
+            log.info("packetLength: {} / packetLengthStr: {}", packetLength, packetLengthStr);
 
             // stx
             out.writeByte(ProtocolState.STX.getValue());
+
+            // 전체 패킷 길이
             out.writeBytes(packetLengthStr.getBytes(StandardCharsets.UTF_8));
-
             // command
-            String command = currentStatus.toString();
-            out.writeBytes(command.getBytes(StandardCharsets.UTF_8));
-
+            out.writeBytes(currentStatus.toString().getBytes(StandardCharsets.UTF_8));
             // body
             out.writeBytes(body);
-
             // etx
             out.writeByte(ProtocolState.ETX.getValue());
-
             log.info("==================================================================================================== \n");
             log.info("Encoded Data: {}  \n ", out.toString(StandardCharsets.UTF_8));
             log.info("====================================================================================================");
-
-            // 비동기 전송
-            ByteBuf buf = ctx.alloc().directBuffer();
-            log.info("before buf: {}",buf);
-
             ctx.writeAndFlush(out);
 
-            log.info("after buf: {}",buf);
-
-        } catch (Exception e) {
-            log.error("Exception occurred during encoding", e);
-            throw e;
         } finally {
             out.release();
+            body.release();
         }
     }
 
-/*    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace(); // 예외출력
-        ctx.close(); // 채널 닫기 및 네트워크 리소스 정리
-    }*/
 
 }

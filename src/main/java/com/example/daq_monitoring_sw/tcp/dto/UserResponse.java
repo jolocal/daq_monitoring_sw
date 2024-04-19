@@ -18,6 +18,7 @@ public class UserResponse {
     private String channelId;
     private String readTo;
     private Queue<String> resDataList;
+    private String timeStamp;
 
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;

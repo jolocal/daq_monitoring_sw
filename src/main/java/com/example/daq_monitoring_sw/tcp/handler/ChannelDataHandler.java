@@ -43,6 +43,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
     /* 서버는 들어오는 데이터를 하나의 패킷으로 처리하고 있으며, 각 파이프라인은 독립적으로 수행되고 있는 것으로 보입니다.*/
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UserRequest userReq) throws Exception {
+        log.debug("Received message: {}", userReq);
 
         DaqCenter currentChannel = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
@@ -53,7 +54,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 }
 
                 case WD -> {
-//                    dataManager.writeData(userReq);
+                    log.info("Processing 'wd' command for DAQ ID: {}", currentChannel.getDaqId());
                     dataManager.writeData(userReq);
                 }
 
@@ -86,26 +87,30 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     String subscribeKey = currentChannel.getReadTo();
 
 
-                    dataManager.subscribe(subscribeKey, channelId, queue -> {
+                    dataManager.subscribe(subscribeKey, channelId, packetQueue -> {
                         // buffer.retain();
 
-                        log.info("[응답 전] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, queue, queue.size());
+                        log.info("[ 데이터발행 콜백 ] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, packetQueue, packetQueue.size());
 
                         UserResponse response = UserResponse.builder()
                                 .status(Status.RD)
                                 .readTo(subscribeKey) //daqId
-                                .sensorCnt(queue.size())
-                                .resDataList(queue)
+                                .sensorCnt(packetQueue.size()-1)
+                                .timeStamp(packetQueue.poll())
+                                .resDataList(packetQueue)
                                 .build();
 
                         ctx.writeAndFlush(response);
-
-                        log.info("[응답 후] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, queue, queue.size());
                     });
+
                 }
                 case ST -> {
+                    log.info("Processing 'st' command for DAQ ID: {}, initiating cleanup.", currentChannel.getDaqId());
                     log.info("==================================== Reqeust [{}] start ====================================", currentChannel.getStatus());
-                    String daqId = currentChannel.getDaqId();
+                    // 데이터 kafka 전송
+                    // 리소스 관리
+                    dataManager.stopAndCleanup(userReq.getDaqId());
+
                 }
                 default -> throw new IllegalStateException("Unexpected value: " + currentChannel.getStatus());
             }

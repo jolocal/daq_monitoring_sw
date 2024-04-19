@@ -59,6 +59,8 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                             .sensorCnt(daqCenter.getSensorCnt())
                             .sensorIdsOrder(daqCenter.getSensorIdsOrder())
                             .parsedSensorData(daqCenter.getParsedSensorData())
+                            .timeStamp(daqCenter.getTimeStamp())
+
                             .build();
 
                     log.info("[ReqDecoder] userRequest: {}",userRequest.toString());
@@ -106,22 +108,24 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 if (currentDaqCenter != null) {
                     List<String> wdSensorIds = currentDaqCenter.getSensorIdsOrder();
 
+                    // 센서갯수
                     sensorCnt = Integer.parseInt(readLength(in, 2));
+                    String rawTime = readLength(in, 8);
+                    log.info("rawTime: {}", rawTime);
+                    String timeStamp = rawTime.substring(0,5) + "." + rawTime.substring(5);
+                    log.info("timeStamp : {}", timeStamp);
 
                     for (int i = 0, sensorIdIndex = 0; i < sensorCnt; i++) {
                         String parsedData = processRawData(in, 5); // 데이터 파싱
                         String sensorId = wdSensorIds.get(i);
 
-//                        if (sensorId.startsWith("DU")) {
-//                            String additionalData = processRawData(in, 5);
-//                            parsedData += additionalData;
-//                            i++;
-//                        }
                         parsedSensorData.put(sensorId, parsedData); // 파싱된 데이터 저장
                         sensorIdIndex++;
                     }
 
+
                     currentDaqCenter.setStatus(Status.WD);
+                    currentDaqCenter.setTimeStamp(timeStamp);
                     currentDaqCenter.setParsedSensorData(parsedSensorData);
 
                     // 변경된 객체를 다시 채널 속성에 설정
