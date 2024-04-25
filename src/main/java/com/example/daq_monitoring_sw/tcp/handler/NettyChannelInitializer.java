@@ -23,13 +23,14 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
 
-        pipeline.addLast("channelManagerHandler", channelManagerHandler);
-
+        // logging
         pipeline.addLast(new LoggingHandler(LogLevel.INFO));
-
+        // channel 관리
+        pipeline.addLast("channelManagerHandler", channelManagerHandler);
+        // codec
         pipeline.addLast(new ReqDecoder(channelRepository));
         pipeline.addLast(new ResEncoder());
-
+        // dataHandler
         pipeline.addLast("nettyChannelDataHandler", nettyChannelDataHandler);
     }
 }

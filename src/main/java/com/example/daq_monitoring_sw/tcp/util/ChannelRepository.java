@@ -46,6 +46,7 @@ public class ChannelRepository extends ChannelInboundHandlerAdapter {
 
     public static void putChannel(String daqId, DaqCenter daqCenter) {
         channelGroup.put(daqId,daqCenter);
+        log.info("[{}] channelGroup put : {}", daqCenter);
     }
 
     public void removeChannel(String channelId) {

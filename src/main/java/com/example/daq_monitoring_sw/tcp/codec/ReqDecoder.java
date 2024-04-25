@@ -35,17 +35,19 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 String stx = readLength(in, 1);
                 checkpoint(ProtocolState.TOTAL_LENGHT);
                 break;
+
             case TOTAL_LENGHT:
-                String totalLength = readLength(in, 2);
+                String totalLength = readLength(in, 3);
                 checkpoint(ProtocolState.COMMAND);
                 break;
+
             case COMMAND:
                 String command = readLength(in, 2);
                 switchCommandState(in, command, ctx);
                 break;
+
             case ETX:
                 String etx = readLength(in, 1);
-
                 DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
                 if (daqCenter != null) {
@@ -67,7 +69,9 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                     out.add(userRequest);
                 }
+
                 checkpoint(ProtocolState.STX);
+                break;
         }
 
     }
@@ -77,6 +81,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
         switch (command) {
             case "IN":
+
                 String daqId = readLength(in, 5);
                 int sensorCnt = Integer.parseInt(readLength(in, 2));
 
@@ -85,6 +90,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     String sensorId = readLength(in, 4);
                     sensorIdsOrder.add(sensorId);
                 }
+                log.info("sensorId: {}", sensorIdsOrder.toString());
 
                 // channel에 저장할 daqcenter 객체 생성
                 DaqCenter daqCenter = DaqCenter.builder()
@@ -99,21 +105,22 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 // channel repository에 저장, key: daqId
                 ChannelRepository.putChannel(daqId, daqCenter);
 
+                log.info("[in] daqcenter put channelRepository: {}", daqCenter);
+
                 checkpoint(ProtocolState.ETX);
                 break;
 
             case "WD":
-                currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+                log.info("wd");
 
+                currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
                 if (currentDaqCenter != null) {
                     List<String> wdSensorIds = currentDaqCenter.getSensorIdsOrder();
 
                     // 센서갯수
                     sensorCnt = Integer.parseInt(readLength(in, 2));
                     String rawTime = readLength(in, 8);
-                    log.info("rawTime: {}", rawTime);
                     String timeStamp = rawTime.substring(0,5) + "." + rawTime.substring(5);
-                    log.info("timeStamp : {}", timeStamp);
 
                     for (int i = 0, sensorIdIndex = 0; i < sensorCnt; i++) {
                         String parsedData = processRawData(in, 5); // 데이터 파싱
@@ -130,6 +137,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                     // 변경된 객체를 다시 채널 속성에 설정
                     ctx.channel().attr(DAQ_CENTER_KEY).set(currentDaqCenter);
+
 
                 }
 
