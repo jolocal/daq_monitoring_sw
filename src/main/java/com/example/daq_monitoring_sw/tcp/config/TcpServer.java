@@ -21,7 +21,7 @@ public class TcpServer {
     public void start(){
         try{
             ChannelFuture serverChannelFuture = serverBootstrap.bind(port).sync();
-            log.info("Server is started : port {}", port.getPort());
+            log.info("Netty is started : port {}", port.getPort());
         } catch (InterruptedException e){
             log.info("InterruptedException : {}", e.getMessage());
             Thread.currentThread().interrupt();

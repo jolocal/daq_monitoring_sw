@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -72,9 +74,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                         // RS: 1차응답
                         DaqCenter currentWdDaqcenter = wdActiveChannel.get();
                         log.info("활성화 중인 WD 채널 정보: {}", currentWdDaqcenter);
-
                         UserResponse firstRes = createFirstRes(currentWdDaqcenter);
-
                         ctx.writeAndFlush(firstRes);
                     }
 
@@ -87,20 +87,33 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     String subscribeKey = currentChannel.getReadTo();
 
 
-                    dataManager.subscribe(subscribeKey, channelId, packetQueue -> {
-                        // buffer.retain();
+                    dataManager.subscribe(subscribeKey, channelId, packetList -> {
+                        log.info("[ 데이터발행 콜백 ] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, packetList, packetList.size());
 
-                        log.info("[ 데이터발행 콜백 ] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, packetQueue, packetQueue.size());
+                        if (packetList.isEmpty()) {
+                            log.warn("Received empty packet list");
+                            return;
+                        }
+
+                        String timeStamp = packetList.get(0);
+                        List<String> resDataList = new ArrayList<>(packetList.subList(1, packetList.size()));
 
                         UserResponse response = UserResponse.builder()
                                 .status(Status.RD)
-                                .readTo(subscribeKey) //daqId
-                                .sensorCnt(packetQueue.size()-1)
-                                .timeStamp(packetQueue.poll())
-                                .resDataList(packetQueue)
+                                .readTo(subscribeKey)
+                                .sensorCnt(resDataList.size())
+                                .timeStamp(timeStamp)
+                                .resDataList(resDataList)
                                 .build();
 
-                        ctx.writeAndFlush(response);
+                        ctx.writeAndFlush(response).addListener(future -> {
+                            if (!future.isSuccess()){
+                                log.error("Failed to send response to client", future.cause());
+                            }
+                        });
+
+                        // 패킷 리스트 클리어 및 참조 해제
+                        packetList.clear();
                     });
 
                 }

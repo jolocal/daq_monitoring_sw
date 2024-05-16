@@ -22,6 +22,7 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.findAllCh
 @Component
 public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     Map<String, String> parsedSensorData = new LinkedHashMap<>();
+    private final StringBuilder stringBuilder = new StringBuilder();
 
     public ReqDecoder(ChannelRepository channelRepository) {
         super(ProtocolState.STX);
@@ -90,7 +91,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     String sensorId = readLength(in, 4);
                     sensorIdsOrder.add(sensorId);
                 }
-                log.info("sensorId: {}", sensorIdsOrder.toString());
 
                 // channel에 저장할 daqcenter 객체 생성
                 DaqCenter daqCenter = DaqCenter.builder()
@@ -105,13 +105,12 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 // channel repository에 저장, key: daqId
                 ChannelRepository.putChannel(daqId, daqCenter);
 
-                log.info("[in] daqcenter put channelRepository: {}", daqCenter);
+                // log.info("[in] daqcenter put channelRepository: {}", daqCenter);
 
                 checkpoint(ProtocolState.ETX);
                 break;
 
             case "WD":
-                log.info("wd");
 
                 currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
                 if (currentDaqCenter != null) {
@@ -179,14 +178,26 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     }
 
     private String readLength(ByteBuf in, int length) {
-        ByteBuf buf = in.readBytes(length);
+
+        // TODO: ByteBuf에서 직접 바이트를 읽어 StringBuilder에 추가하는 방식으로 변경
+        // ByteBuf의 데이터를 불필요하게 ByteBuf 객체로 변환하고 해제하는 과정을 줄일
+        // StringBuilder를 사용하여 문자열을 결합하는 방식으로 변경, String 불필요한 객체 생성 줄임
+        stringBuilder.setLength(0);
+        for (int i=0; i < length; i++){
+            stringBuilder.append((char)in.readByte());
+        }
+        return stringBuilder.toString();
+
+       /*
+       ByteBuf buf = in.readBytes(length);
         String res = buf.toString(StandardCharsets.UTF_8);
         buf.release();
         return res;
+        */
     }
 
     private String processRawData(ByteBuf in, int length) {
-        String rawData = readLength(in, 5);
+        String rawData = readLength(in, length);
         // 첫 번째 문자가 '0'인 경우 '+'로 변경
         if (rawData.startsWith("0")) {
             rawData = "+" + rawData.substring(1);

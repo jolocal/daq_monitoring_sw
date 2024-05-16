@@ -31,27 +31,6 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
 
         try {
             switch (currentStatus) {
-/*                case WD:
-                    String daqId_wd = res.getDaqId();
-                    body.writeBytes(daqId_wd.getBytes(StandardCharsets.UTF_8));
-
-                    for (String sensorId : res.getSensorIdsOrder()) {
-                        body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
-
-                        String sensorData = res.getParsedSensorData().get(sensorId);
-                        if (sensorData != null) {
-                            body.writeBytes(sensorData.getBytes(StandardCharsets.UTF_8));
-                        }
-                    }
-                    break;
-                case RQ:
-                    String daqId_rq = res.getDaqId();
-                    body.writeBytes(daqId_rq.getBytes(StandardCharsets.UTF_8));
-
-                    for (String sensorId : res.getSensorIdsOrder()) {
-                        body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
-                    }
-                    break;*/
                 case RS:
                     String daqId_rs = res.getDaqId();
                     body.writeBytes(daqId_rs.getBytes(StandardCharsets.UTF_8));
@@ -75,10 +54,9 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
                     body.writeBytes(timeStamp.getBytes(StandardCharsets.UTF_8));
 
                     // 센서 데이터를 바이트로 변환하여 body에 쓰기
-                    Queue<String> resDataList = res.getResDataList();
+                    List<String> resDataList = res.getResDataList();
                     for (String resData : resDataList) {
                         byte[] dataBytes = resData.getBytes(StandardCharsets.UTF_8);
-                        log.info("resData: {}", resData);
                         body.writeBytes(dataBytes);
                     }
                     break;
@@ -90,11 +68,9 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
             // 헤더 작성
             int packetLength = body.readableBytes() + 6; // STX(1) + length(2) + status(2) + ETX(1)
             String packetLengthStr = String.format("%03d", packetLength);
-            log.info("packetLength: {} / packetLengthStr: {}", packetLength, packetLengthStr);
 
             // stx
             out.writeByte(ProtocolState.STX.getValue());
-
             // 전체 패킷 길이
             out.writeBytes(packetLengthStr.getBytes(StandardCharsets.UTF_8));
             // command
@@ -103,13 +79,12 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
             out.writeBytes(body);
             // etx
             out.writeByte(ProtocolState.ETX.getValue());
+
             log.info("==================================================================================================== \n");
             log.info("Encoded Data: {}  \n ", out.toString(StandardCharsets.UTF_8));
             log.info("====================================================================================================");
-            ctx.writeAndFlush(out);
 
         } finally {
-            out.release();
             body.release();
         }
     }

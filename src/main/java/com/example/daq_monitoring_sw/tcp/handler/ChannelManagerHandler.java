@@ -19,11 +19,8 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 @RequiredArgsConstructor
 @Sharable
 public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
-
     private final WebChannelEventService webChannelEventService;
-
     private final ChannelRepository channelRepository;
-//    private final DataManager dataManager;
     private final ProcessingDataManager dataManager;
 
     // 채널 활성화 시 호출
@@ -43,12 +40,12 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
         String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
 
 
-        log.info("channel status: {}", daqCenter.getStatus());
 
         log.info("==================================== Client DisConnected: {} ====================================", channelId);
 
         // 사용자 상태 확인 (예: RD, RS, 또는 RQ 중 하나일 때만 구독 해제)
         if (daqCenter.getStatus().equals(Status.RD) || daqCenter.getStatus().equals(Status.RS) || daqCenter.getStatus().equals(Status.RQ)) {
+            log.info("[ 채널 비활성화 ] channel status: {}", daqCenter.getStatus());
             dataManager.unSubscribe(readTo, channelId);
         }
 

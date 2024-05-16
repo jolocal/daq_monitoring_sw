@@ -13,5 +13,4 @@ public class Listener {
     private  String channelId;
     private  String readTo;
     private  List<String> sensorList;
-    private  DataEventListener listener;
 }
