@@ -8,15 +8,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public enum ProtocolState {
     STX((byte)0x02),
-
     TOTAL_LENGHT(null),
     COMMAND(null),
     DAQ_ID(null),
     SENSOR_CNT(null),
     SENSOR_ID(null),
-
     ETX((byte)0x03);
-
     private final Byte value;
 
 }
