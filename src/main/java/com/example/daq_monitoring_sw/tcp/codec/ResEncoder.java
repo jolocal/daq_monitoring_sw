@@ -23,7 +23,7 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 public class ResEncoder extends MessageToByteEncoder<UserResponse> {
     @Override
     protected void encode(ChannelHandlerContext ctx, UserResponse res, ByteBuf out) throws Exception {
-        log.info("Starting encode method for UserResponse: {}", res);
+        log.debug("Starting encode method for UserResponse: {}", res);
         Status currentStatus = res.getStatus();
 
         // 본문 데이터 생성
@@ -80,9 +80,7 @@ public class ResEncoder extends MessageToByteEncoder<UserResponse> {
             // etx
             out.writeByte(ProtocolState.ETX.getValue());
 
-            log.info("==================================================================================================== \n");
-            log.info("Encoded Data: {}  \n ", out.toString(StandardCharsets.UTF_8));
-            log.info("====================================================================================================");
+            log.debug("Encoded Data: {}", out.toString(StandardCharsets.UTF_8));
 
         } finally {
             body.release();
