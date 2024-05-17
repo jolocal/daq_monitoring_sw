@@ -32,10 +32,11 @@ public class ProcessingDataManager {
         ConcurrentLinkedQueue<String> packet = new ConcurrentLinkedQueue<>();
         packet.add(timeStamp);
         packet.addAll(parsedSensorData.values());
-        log.info("[ wd ] packet: {}:{}", packet.size(),packet);
+        log.debug("[WD] Packet created with size {}: {}", packet.size(), packet);
 
-        // 데이터 발행
-        if (subscribers.containsKey(daqId)) {
+        // 데이터 발행 및 구독자에게 데이터 전송
+        List<Subscriber> subscriberList = subscribers.get(daqId);
+        if (subscriberList != null) {
             publishData(daqId, packet);
         }
 
@@ -55,7 +56,7 @@ public class ProcessingDataManager {
 
         // 패킷 큐 재사용을 위해 클리어
         packet.clear();
-        log.info("[ wd ] packet clear() -> {}" , packet);
+        log.debug("[WD] Packet cleared after publishing: {}", packet);
     }
 
 
@@ -63,14 +64,14 @@ public class ProcessingDataManager {
     private void publishData(String daqId, ConcurrentLinkedQueue<String> packet) {
         for (Subscriber subscriber : subscribers.get(daqId)) {
             // 복사된 데이터로 이벤트 발생
-            log.info("[ Copid PublishData ] 복사된 데이터 발행");
             List<String> packetCopy = new ArrayList<>(packet); // 큐를 리스트로 변환하여 데이터 전달
             subscriber.getConsumer().accept(packetCopy);
+            log.debug("[PublishData] Data published to subscriber: {}", subscriber.getChannelId());
         }
 
         // 발행 후 큐 클리어 및 참조 해제
         packet.clear();
-        log.info("[ publishData ] packet clear() -> {}" , packet);
+        log.debug("[PublishData] Packet cleared after publishing: {}", packet);
     }
 
     public void stopAndCleanup(String daqId){
@@ -106,22 +107,21 @@ public class ProcessingDataManager {
         subscribers.computeIfAbsent(subscribeKey, k -> new CopyOnWriteArrayList<>()).add(newSubscriber);
 
         log.info("새로운 구독자: {}", newSubscriber.toString());
-        log.info("[ {} ] 채널에 [{}] 구독자 등록, 현재 구독자 수: {}", subscribeKey, channelId, subscribers.get(subscribeKey).size());
+        log.debug("[ {} ] 채널에 [{}] 구독자 등록, 현재 구독자 수: {}", subscribeKey, channelId, subscribers.get(subscribeKey).size());
     }
 
 
     // 리스너 구독 해제
     public void unSubscribe(String subscribeKey, String channelId) {
         try {
-
-            log.info("subscribeKey: {}, channelId: {} ", subscribeKey, channelId);
+            log.debug("Unsubscribing channelId: {} from subscribeKey: {}", channelId, subscribeKey);
 
             subscribers.compute(subscribeKey,(key,subscriberList) -> {
                 if (subscriberList == null) {
-                    log.info("[{}] 키에 대한 구독자 리스트가 존재하지 않습니다.", subscribeKey);
+                    log.warn("[{}] 키에 대한 구독자 리스트가 존재하지 않습니다.", subscribeKey);
                     return null;
                 }
-                log.info("{} 구독자 리스트: {}", subscribeKey,subscriberList);
+                log.debug("{} 구독자 리스트: {}", subscribeKey,subscriberList);
 
                 boolean removed = subscriberList.removeIf(subscriber -> subscriber.getChannelId().equals(channelId));
                 if (removed) {
@@ -134,7 +134,7 @@ public class ProcessingDataManager {
             });
 
         } catch (Exception e) {
-            log.info("구독자 해제 오류: {}", e.getMessage());
+            log.error("Error during unsubscribe: {}", e.getMessage(), e);
         }
     }
 

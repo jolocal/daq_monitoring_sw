@@ -66,8 +66,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                             .build();
 
-                    log.info("[ReqDecoder] userRequest: {}",userRequest.toString());
-
+                    log.debug("[ReqDecoder] Decoded UserRequest: {}", userRequest);
                     out.add(userRequest);
                 }
 
@@ -104,9 +103,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 ctx.channel().attr(DAQ_CENTER_KEY).set(daqCenter);
                 // channel repository에 저장, key: daqId
                 ChannelRepository.putChannel(daqId, daqCenter);
-
-                // log.info("[in] daqcenter put channelRepository: {}", daqCenter);
-
                 checkpoint(ProtocolState.ETX);
                 break;
 
@@ -129,15 +125,12 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                         sensorIdIndex++;
                     }
 
-
                     currentDaqCenter.setStatus(Status.WD);
                     currentDaqCenter.setTimeStamp(timeStamp);
                     currentDaqCenter.setParsedSensorData(parsedSensorData);
 
                     // 변경된 객체를 다시 채널 속성에 설정
                     ctx.channel().attr(DAQ_CENTER_KEY).set(currentDaqCenter);
-
-
                 }
 
                 checkpoint(ProtocolState.ETX);
@@ -145,7 +138,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
             case "RQ":
                 String readToDaqId = readLength(in, 5);
-
                 String channelId = ctx.channel().id().asShortText();
 
                 // channel에 저장할 daqcenter 객체 생성
@@ -160,7 +152,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 ctx.channel().attr(DAQ_CENTER_KEY).set(daqCenter_rQ);
                 // channel repository에 저장, key: channelId
                 ChannelRepository.putChannel(channelId, daqCenter_rQ);
-
                 checkpoint(ProtocolState.ETX);
                 break;
 
@@ -187,7 +178,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
             stringBuilder.append((char)in.readByte());
         }
         return stringBuilder.toString();
-
        /*
        ByteBuf buf = in.readBytes(length);
         String res = buf.toString(StandardCharsets.UTF_8);

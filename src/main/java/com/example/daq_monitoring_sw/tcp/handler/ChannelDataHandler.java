@@ -37,8 +37,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
     /* 예외 발생시 클라이언트와의 연결을 닫고 예외정보 출력 */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace(); // 네트워크 또는 처리 중 예외 발생 시 호출
-        log.error("error: {}", cause.getMessage());
+        log.error("Exception in channel {}: {}", ctx.channel().id().asShortText(), cause.getMessage(), cause);
         ctx.close(); // 예외 발생 시 채널 닫기
     }
 
@@ -46,7 +45,6 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UserRequest userReq) throws Exception {
         log.debug("Received message: {}", userReq);
-
         DaqCenter currentChannel = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
         if (currentChannel != null) {
@@ -54,7 +52,6 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 case IN -> {
                     return;
                 }
-
                 case WD -> {
                     log.info("Processing 'wd' command for DAQ ID: {}", currentChannel.getDaqId());
                     dataManager.writeData(userReq);
@@ -62,7 +59,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
                 // 리스너 생성, 데이터 발행 클래스에 등록
                 case RQ -> {
-
+                    log.info("Processing 'RQ' command for DAQ ID: {}", currentChannel.getDaqId());
                     // wd-channel 확인
                     Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
 
@@ -81,17 +78,16 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                     //////////////////////////////////////////////////////////////////////
 
                     // RD: 2차응답 준비 및 리스너 등록
-                    log.info("currentChannel info: {}", currentChannel.toString());
-
+                    log.info("Registering listener for DAQ ID: {}", currentChannel.getDaqId());
                     String channelId = currentChannel.getChannelId();
                     String subscribeKey = currentChannel.getReadTo();
 
 
                     dataManager.subscribe(subscribeKey, channelId, packetList -> {
-                        log.info("[ 데이터발행 콜백 ] {} 에게 발행된 복사된 데이터: {} 데이터사이즈: {}", channelId, packetList, packetList.size());
+                        log.info("Data published to {}: {} packets", channelId, packetList.size());
 
                         if (packetList.isEmpty()) {
-                            log.warn("Received empty packet list");
+                            log.warn("Received empty packet list for DAQ ID: {}", currentChannel.getDaqId());
                             return;
                         }
 
@@ -118,8 +114,8 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
                 }
                 case ST -> {
-                    log.info("Processing 'st' command for DAQ ID: {}, initiating cleanup.", currentChannel.getDaqId());
-                    log.info("==================================== Reqeust [{}] start ====================================", currentChannel.getStatus());
+                    log.info("Processing 'ST' command: initiating cleanup for DAQ ID: {}", currentChannel.getDaqId());
+//                    log.info("==================================== Reqeust [{}] start ====================================", currentChannel.getStatus());
                     // 데이터 kafka 전송
                     // 리소스 관리
                     dataManager.stopAndCleanup(userReq.getDaqId());
