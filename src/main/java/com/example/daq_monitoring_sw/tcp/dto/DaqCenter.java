@@ -27,4 +27,9 @@ public class DaqCenter {
     private Map<String, String> parsedSensorData;
     private String timeStamp;
 
+    // 이전 상태
+    private Status previousStatus;
+    // 클린업 여부
+    private boolean cleanupDone = false;
+
 }

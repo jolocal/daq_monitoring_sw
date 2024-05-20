@@ -17,8 +17,9 @@ public enum Status {
 
     CONNECTED("CONNECTED"),
     DISCONNECTED("DISCONNECTED"),
-    RECONNECTING("RECONNECTING")
+    RECONNECTING("RECONNECTING"),
 
+    ER("ERROR")
     ;
 
     private String desc;

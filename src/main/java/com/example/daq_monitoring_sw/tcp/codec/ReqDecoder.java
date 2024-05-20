@@ -31,47 +31,55 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
-        switch (state()) {
-            case STX:
-                String stx = readLength(in, 1);
-                checkpoint(ProtocolState.TOTAL_LENGHT);
-                break;
+        try{
 
-            case TOTAL_LENGHT:
-                String totalLength = readLength(in, 3);
-                checkpoint(ProtocolState.COMMAND);
-                break;
+            switch (state()) {
+                case STX:
+                    String stx = readLength(in, 1);
+                    checkpoint(ProtocolState.TOTAL_LENGHT);
+                    break;
 
-            case COMMAND:
-                String command = readLength(in, 2);
-                switchCommandState(in, command, ctx);
-                break;
+                case TOTAL_LENGHT:
+                    String totalLength = readLength(in, 3);
+                    checkpoint(ProtocolState.COMMAND);
+                    break;
 
-            case ETX:
-                String etx = readLength(in, 1);
-                DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+                case COMMAND:
+                    String command = readLength(in, 2);
+                    switchCommandState(in, command, ctx);
+                    break;
 
-                if (daqCenter != null) {
-                    UserRequest userRequest = UserRequest.builder()
-                            .status(daqCenter.getStatus())
-                            .daqId(daqCenter.getDaqId())
+                case ETX:
+                    String etx = readLength(in, 1);
+                    DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
-                            .channelId(daqCenter.getChannelId())
-                            .readTo(daqCenter.getReadTo())
+                    if (daqCenter != null) {
+                        UserRequest userRequest = UserRequest.builder()
+                                .status(daqCenter.getStatus())
+                                .previousStatus(daqCenter.getPreviousStatus())
+                                .daqId(daqCenter.getDaqId())
 
-                            .sensorCnt(daqCenter.getSensorCnt())
-                            .sensorIdsOrder(daqCenter.getSensorIdsOrder())
-                            .parsedSensorData(daqCenter.getParsedSensorData())
-                            .timeStamp(daqCenter.getTimeStamp())
+                                .channelId(daqCenter.getChannelId())
+                                .readTo(daqCenter.getReadTo())
 
-                            .build();
+                                .sensorCnt(daqCenter.getSensorCnt())
+                                .sensorIdsOrder(daqCenter.getSensorIdsOrder())
+                                .parsedSensorData(daqCenter.getParsedSensorData())
+                                .timeStamp(daqCenter.getTimeStamp())
 
-                    log.debug("[ReqDecoder] Decoded UserRequest: {}", userRequest);
-                    out.add(userRequest);
-                }
+                                .build();
 
-                checkpoint(ProtocolState.STX);
-                break;
+                        log.debug("[ReqDecoder] Decoded UserRequest: {}", userRequest);
+                        out.add(userRequest);
+                    }
+
+                    checkpoint(ProtocolState.STX);
+                    break;
+            }
+        } catch (Exception e) {
+            log.error("decode 메서드 예외 발생: {}",e.getMessage());
+            throw e;
+
         }
 
     }
@@ -81,7 +89,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
         switch (command) {
             case "IN":
-
                 String daqId = readLength(in, 5);
                 int sensorCnt = Integer.parseInt(readLength(in, 2));
 
@@ -107,8 +114,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 break;
 
             case "WD":
-
-                currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
                 if (currentDaqCenter != null) {
                     List<String> wdSensorIds = currentDaqCenter.getSensorIdsOrder();
 
@@ -156,12 +161,12 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 break;
 
             case "ST":
-                currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
-
                 if (currentDaqCenter != null) {
+                    currentDaqCenter.setPreviousStatus(currentDaqCenter.getStatus());
                     currentDaqCenter.setStatus(Status.ST);
                     ctx.channel().attr(DAQ_CENTER_KEY).set(currentDaqCenter);
                 }
+
                 checkpoint(ProtocolState.ETX);
                 break;
 
@@ -169,7 +174,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     }
 
     private String readLength(ByteBuf in, int length) {
-
         // TODO: ByteBuf에서 직접 바이트를 읽어 StringBuilder에 추가하는 방식으로 변경
         // ByteBuf의 데이터를 불필요하게 ByteBuf 객체로 변환하고 해제하는 과정을 줄일
         // StringBuilder를 사용하여 문자열을 결합하는 방식으로 변경, String 불필요한 객체 생성 줄임
@@ -178,14 +182,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
             stringBuilder.append((char)in.readByte());
         }
         return stringBuilder.toString();
-       /*
-       ByteBuf buf = in.readBytes(length);
-        String res = buf.toString(StandardCharsets.UTF_8);
-        buf.release();
-        return res;
-        */
     }
-
     private String processRawData(ByteBuf in, int length) {
         String rawData = readLength(in, length);
         // 첫 번째 문자가 '0'인 경우 '+'로 변경

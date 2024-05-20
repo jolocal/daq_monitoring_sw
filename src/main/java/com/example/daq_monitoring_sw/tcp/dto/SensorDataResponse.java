@@ -6,12 +6,11 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 @Data
 @AllArgsConstructor
 @Builder
-public class UserResponse {
+public class SensorDataResponse {
 
     private String daqId;
     private Status status;
@@ -23,4 +22,6 @@ public class UserResponse {
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
     private Map<String,String> parsedSensorData;
+
+    String msg;
 }

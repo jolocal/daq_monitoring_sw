@@ -1,7 +1,8 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
+import com.example.daq_monitoring_sw.tcp.codec.ErrorResEncdoer;
 import com.example.daq_monitoring_sw.tcp.codec.ReqDecoder;
-import com.example.daq_monitoring_sw.tcp.codec.ResEncoder;
+import com.example.daq_monitoring_sw.tcp.codec.SensorDataResEncoder;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -24,12 +25,16 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         // logging
-        pipeline.addLast(new LoggingHandler(LogLevel.DEBUG));
-        // channel 관리
+        pipeline.addLast(new LoggingHandler(LogLevel.INFO));
+
+        // channel 관리 - 활성화/비활성화 및 예외 처리
         pipeline.addLast("channelManagerHandler", channelManagerHandler);
+
         // codec
         pipeline.addLast(new ReqDecoder(channelRepository));
-        pipeline.addLast(new ResEncoder());
+        pipeline.addLast(new SensorDataResEncoder());
+        pipeline.addLast(new ErrorResEncdoer());
+
         // dataHandler
         pipeline.addLast("nettyChannelDataHandler", nettyChannelDataHandler);
     }

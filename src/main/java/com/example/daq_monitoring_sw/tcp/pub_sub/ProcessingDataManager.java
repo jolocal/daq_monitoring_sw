@@ -16,126 +16,127 @@ import java.util.function.Consumer;
 public class ProcessingDataManager {
 
     @Getter
-    private final Map<String, List<Subscriber>> subscribers = new ConcurrentHashMap<>();
-
-    // 각 DAQID 별로 센서 데이터 패킷을 저장하는 map
-    private final ConcurrentHashMap<String, ConcurrentHashMap<String, List<String>>> daqSensorData = new ConcurrentHashMap<>();
+    private final Map<String, List<Subscriber>> subscriberMap = new ConcurrentHashMap<>(); // 구독자 관리(RD 사용자 관리)
+    private final ConcurrentHashMap<String, ConcurrentHashMap<String, List<String>>> daqSensorData = new ConcurrentHashMap<>();  // 각 DAQID 별로 센서 데이터 패킷을 저장하는 map
 
 
     public void writeData(UserRequest userRequest) {
-
         String daqId = userRequest.getDaqId();
         Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
         String timeStamp = userRequest.getTimeStamp();
 
-        // 실시간 데이터 전송 ( 1 packet )
+        ConcurrentLinkedQueue<String> packet = createPacket(timeStamp, parsedSensorData);
+        log.debug("[WD] 패킷 생성 - 크기: {}: {}", packet.size(), packet);
+
+        List<Subscriber> subscriberList = subscriberMap.get(daqId);
+        if (subscriberList != null) { // 구독자가 있을 경우만 데이터 발행
+            publishData(daqId, packet);
+            log.info("구독자 존재 데이터 발행 완료");
+        } else {
+            packet.clear();
+            log.info("구독자가 존재하지 않아 데이터를 발행하지 않음. packet clear()");
+        }
+
+        storeSensorData(daqId, parsedSensorData);
+
+        packet.clear();
+        log.debug("[WD] 패킷 전송 후 클리어: {}", packet);
+    }
+
+    private ConcurrentLinkedQueue<String> createPacket(String timeStamp, Map<String, String> parsedSensorData) {
         ConcurrentLinkedQueue<String> packet = new ConcurrentLinkedQueue<>();
         packet.add(timeStamp);
         packet.addAll(parsedSensorData.values());
-        log.debug("[WD] Packet created with size {}: {}", packet.size(), packet);
+        return packet;
+    }
 
-        // 데이터 발행 및 구독자에게 데이터 전송
-        List<Subscriber> subscriberList = subscribers.get(daqId);
-        if (subscriberList != null) {
-            publishData(daqId, packet);
-        }
-
-        // TODO: 메모리 누수 의심 부분
-        // 데이터 축적
-        // 1. daqId에 해당하는 센서 데이터 맵을 가져오거나 새로 생성
+    private void storeSensorData(String daqId, Map<String, String> parsedSensorData) {
         ConcurrentHashMap<String, List<String>> sensorDataMap = daqSensorData.computeIfAbsent(daqId, k -> new ConcurrentHashMap<>());
-
-        // 2. parsedSensorData의 각 센서 ID에 대해 처리
         parsedSensorData.forEach((sensorId, sensorValue) -> {
             List<String> dataList = sensorDataMap.computeIfAbsent(sensorId, k -> new ArrayList<>());
             dataList.add(sensorValue);
-            if (dataList.size() > 1000) { // 데이터 리스트 크기 제한
-                dataList.remove(0); // 오래된 데이터 제거
+            if (dataList.size() > 1000) {
+                dataList.remove(0);
             }
         });
-
-        // 패킷 큐 재사용을 위해 클리어
-        packet.clear();
-        log.debug("[WD] Packet cleared after publishing: {}", packet);
     }
 
 
     // 리스너에게 데이터 발행
     private void publishData(String daqId, ConcurrentLinkedQueue<String> packet) {
-        for (Subscriber subscriber : subscribers.get(daqId)) {
-            // 복사된 데이터로 이벤트 발생
-            List<String> packetCopy = new ArrayList<>(packet); // 큐를 리스트로 변환하여 데이터 전달
-            subscriber.getConsumer().accept(packetCopy);
-            log.debug("[PublishData] Data published to subscriber: {}", subscriber.getChannelId());
-        }
+        List<Subscriber> subscriberList = subscriberMap.get(daqId);
 
+        if (subscriberList != null) {
+            List<Subscriber> activeSubscribers = new ArrayList<>();
+
+            for (Subscriber subscriber : subscriberList) {
+                // 채널이 활성 상태인지 확인
+                if (subscriber.getChannelContext().channel().isActive()) {
+                    activeSubscribers.add(subscriber);
+                    subscriber.getDataHandler().accept(new ArrayList<>(packet)); // 큐를 리스트로 변환하여 데이터 전달
+                    log.debug("[PublishData] 데이터 발행 - 구독자: {}", subscriber.getChannelId());
+                } else {
+                    log.warn("[PublishData] 비활성화된 구독자 제거: {}", subscriber.getChannelId());
+                }
+            }
+            // 비활성 구독자 제거
+            subscriberMap.put(daqId, activeSubscribers);
+        }
         // 발행 후 큐 클리어 및 참조 해제
         packet.clear();
-        log.debug("[PublishData] Packet cleared after publishing: {}", packet);
     }
 
-    public void stopAndCleanup(String daqId){
-        ConcurrentHashMap<String, List<String>> sensorDataMap = daqSensorData.get(daqId);
-        if (sensorDataMap != null) {
-            sendToKafka(daqId, sensorDataMap);
-            daqSensorData.remove(daqId);
-            // 데이터 삭제 확인
-            if (daqSensorData.containsKey(daqId)) {
-                log.error("Failed to remove data for DAQ ID: {}", daqId);
-            } else {
-                log.info("Data successfully removed for DAQ ID: {}", daqId);
+    public void stopAndCleanup(String daqId) {
+        try {
+            log.info("[WD-ST] WD사용자 프로세스 종료 및 리소스 정리 작업 시작");
+            ConcurrentHashMap<String, List<String>> sensorDataMap = daqSensorData.remove(daqId);
+            if (sensorDataMap != null) {
+                sendToKafka(daqId, sensorDataMap);
+                log.info("[WD-stopAndCleanup] 데이터 제거 완료 - DAQ ID: {}", daqId);
             }
-        }else {
-            log.warn("No sensor data found for DAQ ID: {}",daqId);
+
+        } catch (Exception e) {
+            log.error("[WD-stopAndCleanup] 예외 발생 - 원인: {}", e.getMessage(), e);
         }
+
     }
 
     // kafka로 데이터를 전송하는 메서드
     private void sendToKafka(String daqId, Map<String, List<String>> sensorDataMap) {
-        log.debug("Sending data to Kafka for DAQ ID: {}", daqId);
+        log.debug("[Kafka] 데이터 전송 - DAQ ID: {}", daqId);
         // Kafka 전송 로직 구현 (예시)
         // KafkaProducer.send(daqId, sensorData);
-        log.info("Data successfully sent to Kafka for DAQ ID: {}", daqId);
+        log.info("[Kafka] 데이터 전송 성공 - DAQ ID: {}", daqId);
     }
-
 
 
     // 리스너 구독 등록
 
-    public void subscribe(String subscribeKey, String channelId, Consumer<List<String>> consumer) {
-        Subscriber newSubscriber = new Subscriber(consumer, channelId);
-        subscribers.computeIfAbsent(subscribeKey, k -> new CopyOnWriteArrayList<>()).add(newSubscriber);
-
-        log.info("새로운 구독자: {}", newSubscriber.toString());
-        log.debug("[ {} ] 채널에 [{}] 구독자 등록, 현재 구독자 수: {}", subscribeKey, channelId, subscribers.get(subscribeKey).size());
+    public void subscribe(String subscribeKey, String channelId, ChannelHandlerContext ctx, Consumer<List<String>> dataHandler) {
+        Subscriber newSubscriber = new Subscriber(dataHandler, channelId, ctx); // Subscriber 객체 생성
+        subscriberMap.computeIfAbsent(subscribeKey, k -> new CopyOnWriteArrayList<>()).add(newSubscriber);
+        // computeIfAbsent : subscriberMap에 subscribekey가 존재하지 않으면 새로운 CopyOnWriteArrayList<>를 생성하고 해당 키에 매핑
+        // 이미 subscribekey가 존재하면 기존의 값을 반환,
+        // -> 이 메서드는 키에 해당하는 값이 없는 경우에만 새로운 값을 계산하고 삽입
+        log.info("[구독] 채널: {}, 구독자 등록 - 현재 구독자 수: {}", subscribeKey, subscriberMap.get(subscribeKey).size());
     }
 
 
     // 리스너 구독 해제
     public void unSubscribe(String subscribeKey, String channelId) {
-        try {
-            log.debug("Unsubscribing channelId: {} from subscribeKey: {}", channelId, subscribeKey);
-
-            subscribers.compute(subscribeKey,(key,subscriberList) -> {
-                if (subscriberList == null) {
-                    log.warn("[{}] 키에 대한 구독자 리스트가 존재하지 않습니다.", subscribeKey);
-                    return null;
-                }
-                log.debug("{} 구독자 리스트: {}", subscribeKey,subscriberList);
-
-                boolean removed = subscriberList.removeIf(subscriber -> subscriber.getChannelId().equals(channelId));
-                if (removed) {
-                    log.info("[{}] 채널의 [{}] 구독자 해제 완료, 현재 구독자 수: {}", subscribeKey, channelId, subscriberList.size());
-                } else {
-                    log.info("[{}] 채널에 [{}] 구독자가 존재하지 않습니다.", subscribeKey, channelId);
-                }
-
-                return subscriberList.isEmpty() ? null : subscriberList;
-            });
-
-        } catch (Exception e) {
-            log.error("Error during unsubscribe: {}", e.getMessage(), e);
-        }
+      subscriberMap.compute(subscribeKey, (key, subscriberList) -> {
+            if (subscriberList == null) {
+                log.warn("[RD-구독 해제] 구독자 리스트 없음 - 구독 키: {}", subscribeKey);
+                return null;
+            }
+            boolean removed = subscriberList.removeIf(subscriber -> subscriber.getChannelId().equals(channelId));
+            if (removed) {
+                log.info("[RD-구독 해제] 완료 - 구독 키: {}, 채널 ID: {}, 남은 구독자 수: {}", subscribeKey, channelId, subscriberList.size());
+            } else {
+                log.info("[RD-구독 해제] 해당 구독자 없음 - 구독 키: {}, 채널 ID: {}", subscribeKey, channelId);
+            }
+            return subscriberList.isEmpty() ? null : subscriberList;
+        });
     }
 
 }

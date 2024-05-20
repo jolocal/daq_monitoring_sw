@@ -1,5 +1,6 @@
 netty:
 #  port: 1433
+#  port: 8000
   port: 1715
   boss-count: 1    # Netty boss 쓰레드 개수
   worker-count: 4  # Netty worker 쓰레드 개수
@@ -10,8 +11,8 @@ spring:
   application:
     name: daq-monitoring-sw
 
-logging:
-  level:
-    root: INFO
-    com.example.daq_monitoring_sw: DEBUG # 애플리케이션 패키지 로그 레벨 설정
-    org.springframework: INFO # Spring 관련 로그 레벨 설정
+#logging:
+#  level:
+#    root: INFO
+#    com.example.daq_monitoring_sw: DEBUG # 애플리케이션 패키지 로그 레벨 설정
+#    org.springframework: INFO # Spring 관련 로그 레벨 설정

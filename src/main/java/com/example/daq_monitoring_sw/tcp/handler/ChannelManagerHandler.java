@@ -19,7 +19,6 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 @RequiredArgsConstructor
 @Sharable
 public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
-    private final WebChannelEventService webChannelEventService;
     private final ChannelRepository channelRepository;
     private final ProcessingDataManager dataManager;
 
@@ -28,38 +27,77 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
         log.info("==================================== Client connected: {} ====================================", channelId);
-//        webChannelEventService.sendDaqCenterInfo(daqCenter); // 웹 서버에 정보 전송
         ctx.fireChannelActive();
     }
 
     // 채널 비활성화 시 호출
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        DaqCenter currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
-        if (daqCenter != null) {
-            String readTo = daqCenter.getReadTo();
-            String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
+        try {
+            if (currentDaqCenter != null) {
+                String daqId = currentDaqCenter.getDaqId(); //rd: channelId (3d12b95a)
+                String channelId = currentDaqCenter.getChannelId(); // rd: channelId (3d12b95a)
 
-            log.info("==================================== Client DisConnected: {} ====================================", channelId);
+                log.info("==================================== Client DisConnected: WD:{}, RD:{} ====================================", daqId, channelId);
+                log.info("channel info: {}", currentDaqCenter);
+                if (!currentDaqCenter.isCleanupDone()) {
+                    performCleanup(currentDaqCenter, daqId, ctx);
+                }
 
-            channelRepository.removeChannel(daqCenter.getDaqId());
+                channelRepository.removeChannel(daqId);
 
-            // 사용자 상태 확인 (예: RD, RS, 또는 RQ 중 하나일 때만 구독 해제)
-            if (daqCenter.getStatus().equals(Status.RD) || daqCenter.getStatus().equals(Status.RS) || daqCenter.getStatus().equals(Status.RQ)) {
-                log.info("[ 채널 비활성화 ] channel status: {}", daqCenter.getStatus());
-                dataManager.unSubscribe(readTo, channelId);
+                ctx.close(); // 소켓닫기
+
             }
-
-            // 채널 비활성화 정보 웹 서버에 전송
-            // webChannelEventService.sendDaqCenterInfo(daqCenter);
+        } catch (Exception e) {
+            log.error("[channelInactive] 채널 비활성화 중 예외 발생: {}", e.getMessage(),e);
         }
 
     }
 
+    // 예외 발생 시 호출
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("Exception in channel {}: {}", ctx.channel().id().asShortText(), cause.getMessage());
-        ctx.close(); // 예외 발생 시 채널 닫기
+        if (cause instanceof java.net.SocketException && "Connection reset".equals(cause.getMessage())) {
+            log.warn("Connection reset by client: {}", ctx.channel().remoteAddress());
+        } else {
+            log.error("Exception in channel {}: {}", ctx.channel().id().asShortText(), cause.getMessage(), cause);
+        }
+
+        DaqCenter currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        if (currentDaqCenter != null) {
+            String daqId = currentDaqCenter.getDaqId();
+
+            log.info(currentDaqCenter.toString());
+            performCleanup(currentDaqCenter, daqId, ctx);
+
+            channelRepository.removeChannel(daqId);
+            log.info("[exceptionCaught] 채널 저장소에서 제거 - DAQ ID: {}", daqId);
+        }
+
+        ctx.close();
+    }
+
+    private void performCleanup(DaqCenter currentChannel, String daqId, ChannelHandlerContext ctx) {
+
+        // WD 사용자일 경우 데이터 발행 중지
+        if (currentChannel.getPreviousStatus() == Status.WD) {
+            log.info("[performCleanup - WD] 데이터 발행 중지 및 클린업 시작 - DAQ ID: {}", daqId);
+            dataManager.stopAndCleanup(daqId);
+            log.info("[performCleanup - WD] 데이터 발행 중지 및 클린업 완료 - DAQ ID: {}", daqId);
+        }
+
+        // RD 사용자일 경우 리스너그룹에서 구독 해제
+        if (currentChannel.getPreviousStatus() == Status.RQ) {
+            String subscribeKey = currentChannel.getReadTo();
+            String channelId = currentChannel.getChannelId();
+            log.info("[performCleanup - RD] 리스너 그룹에서 구독 해제 시작 - Subscribe Key: {}, Channel ID: {}", subscribeKey, channelId);
+            dataManager.unSubscribe(subscribeKey, channelId);
+            log.info("[performCleanup - RD] 리스너 그룹에서 구독 해제 완료 - Subscribe Key: {}, Channel ID: {}", subscribeKey, channelId);
+        }
+
+        currentChannel.setCleanupDone(true); // 클린업 완료 기록
     }
 }
