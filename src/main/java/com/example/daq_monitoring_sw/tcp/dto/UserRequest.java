@@ -27,5 +27,9 @@ public class UserRequest {
     private List<String> sensorIdsOrder;
     private Map<String, String> parsedSensorData; // TP01:+000.0
     private String timeStamp;
+
+    // 이전 상태
+    private Status previousStatus;
+
 }
 

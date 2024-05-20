@@ -23,4 +23,6 @@ public class UserResponse {
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
     private Map<String,String> parsedSensorData;
+
+    String msg;
 }

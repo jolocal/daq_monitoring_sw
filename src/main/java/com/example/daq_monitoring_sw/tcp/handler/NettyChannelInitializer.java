@@ -24,7 +24,7 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         // logging
-        pipeline.addLast(new LoggingHandler(LogLevel.DEBUG));
+        pipeline.addLast(new LoggingHandler(LogLevel.INFO));
         // channel 관리
         pipeline.addLast("channelManagerHandler", channelManagerHandler);
         // codec

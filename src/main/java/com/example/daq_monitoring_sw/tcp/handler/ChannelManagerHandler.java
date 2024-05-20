@@ -35,24 +35,30 @@ public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     // 채널 비활성화 시 호출
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        DaqCenter daqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        DaqCenter currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
-        if (daqCenter != null) {
-            String readTo = daqCenter.getReadTo();
-            String channelId = ctx.channel().id().asShortText(); // 채널ID 가져오기
+        if (currentDaqCenter != null) {
+            String daqId = currentDaqCenter.getDaqId();
+            String channelId = currentDaqCenter.getChannelId();
+            String subscribeKey = currentDaqCenter.getReadTo();
 
             log.info("==================================== Client DisConnected: {} ====================================", channelId);
 
-            channelRepository.removeChannel(daqCenter.getDaqId());
-
-            // 사용자 상태 확인 (예: RD, RS, 또는 RQ 중 하나일 때만 구독 해제)
-            if (daqCenter.getStatus().equals(Status.RD) || daqCenter.getStatus().equals(Status.RS) || daqCenter.getStatus().equals(Status.RQ)) {
-                log.info("[ 채널 비활성화 ] channel status: {}", daqCenter.getStatus());
-                dataManager.unSubscribe(readTo, channelId);
+            // WD 사용자일 경우 데이터 발행 중지 및 클린업
+            if (currentDaqCenter.getStatus() == Status.WD){
+                dataManager.stopAndCleanup(daqId);
             }
+            // RD 사용자일 경우 리스너그룹에서 구독 해제
+            if (currentDaqCenter.getStatus() == Status.RD){
+                dataManager.unSubscribe(subscribeKey,channelId);
+            }
+            // 채널 저장소에서 제거
+            channelRepository.removeChannel(currentDaqCenter.getDaqId());
 
             // 채널 비활성화 정보 웹 서버에 전송
             // webChannelEventService.sendDaqCenterInfo(daqCenter);
+
+            super.channelInactive(ctx);
         }
 
     }

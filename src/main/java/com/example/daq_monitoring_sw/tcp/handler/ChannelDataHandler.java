@@ -115,12 +115,20 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 }
                 case ST -> {
                     log.info("Processing 'ST' command: initiating cleanup for DAQ ID: {}", currentChannel.getDaqId());
-//                    log.info("==================================== Reqeust [{}] start ====================================", currentChannel.getStatus());
-                    // 데이터 kafka 전송
-                    // 리소스 관리
-                    dataManager.stopAndCleanup(userReq.getDaqId());
+                    String channelId = currentChannel.getChannelId();
+                    String subscribeKey = currentChannel.getReadTo();
+
+                    // WD 사용자일 경우 데이터 발행 중지
+                    if (currentChannel.getPreviousStatus() == Status.WD)
+                        dataManager.stopAndCleanup(userReq.getDaqId());
+                        // TODO: 데이터 kafka 전송, 리소스 관리
+
+                    // RD 사용자일 경우 리스너그룹에서 구독 해제
+                    if (currentChannel.getPreviousStatus() == Status.RD)
+                        dataManager.unSubscribe(subscribeKey, channelId);
 
                 }
+
                 default -> throw new IllegalStateException("Unexpected value: " + currentChannel.getStatus());
             }
 

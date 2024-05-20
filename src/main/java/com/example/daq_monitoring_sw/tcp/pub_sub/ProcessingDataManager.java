@@ -36,8 +36,10 @@ public class ProcessingDataManager {
 
         // 데이터 발행 및 구독자에게 데이터 전송
         List<Subscriber> subscriberList = subscribers.get(daqId);
-        if (subscriberList != null) {
+        if (subscriberList != null) { // 구독자가 있을 경우만 데이터 발행
             publishData(daqId, packet);
+        } else {
+            packet.clear();
         }
 
         // TODO: 메모리 누수 의심 부분
@@ -75,18 +77,23 @@ public class ProcessingDataManager {
     }
 
     public void stopAndCleanup(String daqId){
-        ConcurrentHashMap<String, List<String>> sensorDataMap = daqSensorData.get(daqId);
-        if (sensorDataMap != null) {
-            sendToKafka(daqId, sensorDataMap);
-            daqSensorData.remove(daqId);
-            // 데이터 삭제 확인
-            if (daqSensorData.containsKey(daqId)) {
-                log.error("Failed to remove data for DAQ ID: {}", daqId);
-            } else {
-                log.info("Data successfully removed for DAQ ID: {}", daqId);
+        try{
+            ConcurrentHashMap<String, List<String>> sensorDataMap = daqSensorData.get(daqId);
+            if (sensorDataMap != null) {
+                sendToKafka(daqId, sensorDataMap);
+                daqSensorData.remove(daqId);
+                // 데이터 삭제 확인
+                if (daqSensorData.containsKey(daqId)) {
+                    log.error("Failed to remove data for DAQ ID: {}", daqId);
+                } else {
+                    log.info("Data successfully removed for DAQ ID: {}", daqId);
+                }
+            }else {
+                log.warn("No sensor data found for DAQ ID: {}",daqId);
             }
-        }else {
-            log.warn("No sensor data found for DAQ ID: {}",daqId);
+
+        } catch (Exception e) {
+            log.error(" Error during stopAndCleanup: {} / cause: {}",e.getMessage(),e.getCause());
         }
     }
 
@@ -106,7 +113,6 @@ public class ProcessingDataManager {
         Subscriber newSubscriber = new Subscriber(consumer, channelId);
         subscribers.computeIfAbsent(subscribeKey, k -> new CopyOnWriteArrayList<>()).add(newSubscriber);
 
-        log.info("새로운 구독자: {}", newSubscriber.toString());
         log.debug("[ {} ] 채널에 [{}] 구독자 등록, 현재 구독자 수: {}", subscribeKey, channelId, subscribers.get(subscribeKey).size());
     }
 
@@ -134,7 +140,7 @@ public class ProcessingDataManager {
             });
 
         } catch (Exception e) {
-            log.error("Error during unsubscribe: {}", e.getMessage(), e);
+            log.error("Error during unsubscribe: {} / cause: {}", e.getMessage(), e.getCause());
         }
     }
 
