@@ -119,8 +119,11 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                     // 센서갯수
                     sensorCnt = Integer.parseInt(readLength(in, 2));
-                    String rawTime = readLength(in, 8);
-                    String timeStamp = rawTime.substring(0,5) + "." + rawTime.substring(5);
+
+                    String timeStamp = readLength(in, 9); // hh
+
+                    /*String rawTime = readLength(in, 8);
+                    String timeStamp = rawTime.substring(0,5) + "." + rawTime.substring(5);*/
 
                     for (int i = 0, sensorIdIndex = 0; i < sensorCnt; i++) {
                         String parsedData = processRawData(in, 5); // 데이터 파싱
