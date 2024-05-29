@@ -1,19 +1,33 @@
 package com.example.daq_monitoring_sw.tcp.pub_sub;
 
-import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
+import com.example.daq_monitoring_sw.tcp.entity.DaqCenter;
+import com.example.daq_monitoring_sw.tcp.repository.DaqCenterRepository;
+import com.example.daq_monitoring_sw.tcp.repository.SensorRepository;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 @Slf4j
-@Component
-public class ProcessingDataManager {
+@Service
+@RequiredArgsConstructor
+public class ProcessingDataService {
+
+    private final DaqCenterRepository daqCenterRepository;
+    private final SensorRepository sensorRepository;
+
 
     @Getter
     private final Map<String, List<Subscriber>> subscriberMap = new ConcurrentHashMap<>(); // 구독자 관리(RD 사용자 관리)
@@ -23,11 +37,12 @@ public class ProcessingDataManager {
     public void writeData(UserRequest userRequest) {
         String daqId = userRequest.getDaqId();
         Map<String, String> parsedSensorData = userRequest.getParsedSensorData();
-        String timeStamp = userRequest.getTimeStamp();
+        String timeStamp = String.valueOf(userRequest.getCliSentTime());
 
         ConcurrentLinkedQueue<String> packet = createPacket(timeStamp, parsedSensorData);
         log.debug("[WD] 패킷 생성 - 크기: {}: {}", packet.size(), packet);
 
+        // 데이터 발행
         List<Subscriber> subscriberList = subscriberMap.get(daqId);
         if (subscriberList != null) { // 구독자가 있을 경우만 데이터 발행
             publishData(daqId, packet);
@@ -37,10 +52,49 @@ public class ProcessingDataManager {
             log.info("구독자가 존재하지 않아 데이터를 발행하지 않음. packet clear()");
         }
 
-        storeSensorData(daqId, parsedSensorData);
+        // DB 저장
+        storeSensorData(userRequest);
 
         packet.clear();
         log.debug("[WD] 패킷 전송 후 클리어: {}", packet);
+    }
+
+    private void storeSensorData(UserRequest userRequest) {
+        log.info("DB 데이터 저장 시작");
+        // 지연율 구하기
+        String cliSentStr = userRequest.getCliSentTime();
+        LocalTime cliSentTime = convertToLocalDateTime(cliSentStr);
+
+        // 서버가 현재 시간을 가져옴
+        LocalTime serverReceivedTime = LocalTime.now();
+
+        // 지연 시간 계산
+        Duration delay = Duration.between(cliSentTime, serverReceivedTime);
+        long delayInMillis = delay.toMillis();
+
+        // 지연 시간 출력 (또는 로그 기록)
+        System.out.println("Sent time: " + formatLocalTime(cliSentTime));
+        System.out.println("Received time: " + formatLocalTime(serverReceivedTime));
+        System.out.println("Delay in milliseconds: " + delayInMillis + " ms");
+
+    }
+
+    public static LocalTime convertToLocalDateTime(String cliSentStr) {
+        long millis = Long.parseLong(cliSentStr);
+
+        long hours = millis / 3600000;
+        millis %= 3600000;
+        long minutes = millis / 60000;
+        millis %= 60000;
+        long seconds = millis / 1000;
+        long milliseconds = millis % 1000;
+
+        return LocalTime.of((int) hours, (int) minutes, (int) seconds, (int) milliseconds * 1000000);
+    }
+
+    public static String formatLocalTime(LocalTime time) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HHmmssSSS");
+        return time.format(formatter);
     }
 
     private ConcurrentLinkedQueue<String> createPacket(String timeStamp, Map<String, String> parsedSensorData) {
@@ -50,16 +104,18 @@ public class ProcessingDataManager {
         return packet;
     }
 
-    private void storeSensorData(String daqId, Map<String, String> parsedSensorData) {
+   /* private void storeSensorData(String daqId, Map<String, String> parsedSensorData) {
         ConcurrentHashMap<String, List<String>> sensorDataMap = daqSensorData.computeIfAbsent(daqId, k -> new ConcurrentHashMap<>());
         parsedSensorData.forEach((sensorId, sensorValue) -> {
             List<String> dataList = sensorDataMap.computeIfAbsent(sensorId, k -> new ArrayList<>());
             dataList.add(sensorValue);
+
+            // 데이터 정리
             if (dataList.size() > 1000) {
                 dataList.remove(0);
             }
         });
-    }
+    }*/
 
 
     // 리스너에게 데이터 발행

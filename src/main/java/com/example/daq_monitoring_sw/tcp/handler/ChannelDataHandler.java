@@ -1,7 +1,7 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.*;
-import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataManager;
+import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataService;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -24,7 +24,7 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest> {
 
     private final ChannelRepository channelRepository;
-    private final ProcessingDataManager dataManager;
+    private final ProcessingDataService dataManager;
 
 
     @Override

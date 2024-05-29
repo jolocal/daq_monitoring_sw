@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +27,10 @@ public class DaqCenter {
     private Integer sensorCnt;
     private List<String> sensorIdsOrder;
     private Map<String, String> parsedSensorData;
-    private String timeStamp;
+
+    private String cliSentTime;
+    private LocalTime servRecvTime;
+    private String transDelay;
 
     // 이전 상태
     private Status previousStatus;

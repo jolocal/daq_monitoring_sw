@@ -2,9 +2,8 @@ package com.example.daq_monitoring_sw.tcp.handler;
 
 import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
 import com.example.daq_monitoring_sw.tcp.dto.Status;
-import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataManager;
+import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataService;
 import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
-import com.example.daq_monitoring_sw.web.service.WebChannelEventService;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -20,7 +19,7 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 @Sharable
 public class ChannelManagerHandler extends ChannelInboundHandlerAdapter {
     private final ChannelRepository channelRepository;
-    private final ProcessingDataManager dataManager;
+    private final ProcessingDataService dataManager;
 
     // 채널 활성화 시 호출
     @Override

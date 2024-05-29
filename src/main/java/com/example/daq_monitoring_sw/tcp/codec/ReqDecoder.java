@@ -13,6 +13,10 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
@@ -65,7 +69,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                                 .sensorCnt(daqCenter.getSensorCnt())
                                 .sensorIdsOrder(daqCenter.getSensorIdsOrder())
                                 .parsedSensorData(daqCenter.getParsedSensorData())
-                                .timeStamp(daqCenter.getTimeStamp())
+                                .cliSentTime(daqCenter.getCliSentTime())
 
                                 .build();
 
@@ -120,10 +124,8 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     // 센서갯수
                     sensorCnt = Integer.parseInt(readLength(in, 2));
 
+                    // cliSentTime
                     String timeStamp = readLength(in, 9); // hh
-
-                    /*String rawTime = readLength(in, 8);
-                    String timeStamp = rawTime.substring(0,5) + "." + rawTime.substring(5);*/
 
                     for (int i = 0, sensorIdIndex = 0; i < sensorCnt; i++) {
                         String parsedData = processRawData(in, 5); // 데이터 파싱
@@ -134,8 +136,10 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     }
 
                     currentDaqCenter.setStatus(Status.WD);
-                    currentDaqCenter.setTimeStamp(timeStamp);
+                    currentDaqCenter.setCliSentTime(timeStamp);
                     currentDaqCenter.setParsedSensorData(parsedSensorData);
+
+                    log.info("getServRecvTime: {} / getCliSentTime: {}",currentDaqCenter.getServRecvTime() , currentDaqCenter.getCliSentTime());
 
                     // 변경된 객체를 다시 채널 속성에 설정
                     ctx.channel().attr(DAQ_CENTER_KEY).set(currentDaqCenter);
