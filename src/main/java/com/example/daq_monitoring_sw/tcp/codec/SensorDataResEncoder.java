@@ -1,7 +1,7 @@
 package com.example.daq_monitoring_sw.tcp.codec;
 
-import com.example.daq_monitoring_sw.tcp.dto.SensorDataResponse;
-import com.example.daq_monitoring_sw.tcp.dto.Status;
+import com.example.daq_monitoring_sw.tcp.dto.RqInfoRes;
+import com.example.daq_monitoring_sw.tcp.common.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -14,10 +14,10 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class SensorDataResEncoder extends MessageToByteEncoder<SensorDataResponse> {
+public class SensorDataResEncoder extends MessageToByteEncoder<RqInfoRes> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, SensorDataResponse res, ByteBuf out) throws Exception {
-        log.info("Starting encode method for SensorDataResponse: {}", res);
+    protected void encode(ChannelHandlerContext ctx, RqInfoRes res, ByteBuf out) throws Exception {
+        log.info("Starting encode method for RqInfoRes: {}", res);
         Status currentStatus = res.getStatus();
 
         // 본문 데이터 생성
@@ -26,29 +26,30 @@ public class SensorDataResEncoder extends MessageToByteEncoder<SensorDataRespons
         try {
             switch (currentStatus) {
                 case RS:
-                    String daqId_rs = res.getDaqId();
-                    body.writeBytes(daqId_rs.getBytes(StandardCharsets.UTF_8));
+                    String daqName = res.getDaqName();
+                    log.info("daqName: {}",daqName);
+                    body.writeBytes(daqName.getBytes(StandardCharsets.UTF_8));
 
-                    int sensorCnt_rs = res.getSensorCnt();
-                    String sensorCnt_rs_str = String.format("%02d", sensorCnt_rs);
-                    body.writeBytes(sensorCnt_rs_str.getBytes(StandardCharsets.UTF_8));
+                    String sensorCnt = res.getSensorCnt();
+                    log.info("getSensorCnt: {}", res.getSensorCnt());
+                    body.writeBytes(sensorCnt.getBytes(StandardCharsets.UTF_8));
 
-                    for (String sensorId : res.getSensorIdsOrder()) {
+                    for (String sensorId : res.getSensorList()) {
                         body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
                     }
                     break;
 
                 case RD:
                     // 센서갯수
-                    int sensorCnt_rd = res.getSensorCnt();
-                    String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
-                    body.writeBytes(sensorCnt_rd_str.getBytes(StandardCharsets.UTF_8));
+                    String cnt = res.getSensorCnt();
+                    body.writeBytes(cnt.getBytes(StandardCharsets.UTF_8));
+//                    String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
 
-                    String timeStamp = res.getTimeStamp();
-                    body.writeBytes(timeStamp.getBytes(StandardCharsets.UTF_8));
+                    String cliSentTime = res.getCliSentTime();
+                    body.writeBytes(cliSentTime.getBytes(StandardCharsets.UTF_8));
 
                     // 센서 데이터를 바이트로 변환하여 body에 쓰기
-                    List<String> resDataList = res.getResDataList();
+                    List<String> resDataList = res.getPacketList();
                     for (String resData : resDataList) {
                         byte[] dataBytes = resData.getBytes(StandardCharsets.UTF_8);
                         body.writeBytes(dataBytes);
@@ -60,7 +61,13 @@ public class SensorDataResEncoder extends MessageToByteEncoder<SensorDataRespons
             }
 
             // 헤더 작성
-            int fixLength = 7; // STX(1) + totalLength(3) + status(2) + ETX(1)
+            int fixLength = 7; // STX(1) +
+
+
+
+
+
+            // (3) + status(2) + ETX(1)
             int totalLength = body.readableBytes() + fixLength;
             String totalLengthStr = String.format("%03d", totalLength);
 

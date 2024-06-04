@@ -1,4 +1,4 @@
-package com.example.daq_monitoring_sw.tcp.dto;
+package com.example.daq_monitoring_sw.tcp.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

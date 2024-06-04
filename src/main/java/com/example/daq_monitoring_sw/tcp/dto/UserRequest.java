@@ -1,12 +1,12 @@
 package com.example.daq_monitoring_sw.tcp.dto;
 
+import com.example.daq_monitoring_sw.tcp.common.Status;
+import io.netty.channel.ChannelId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
@@ -19,17 +19,16 @@ public class UserRequest {
 
     // write
     private Status status;
-    private String daqId;
+    private String daqName;
 
     // read
-    private String channelId;
     private String readTo;
-    private List<String> resDataList;
 
     // common
-    private Integer sensorCnt;
-    private List<String> sensorIdsOrder;
-    private Map<String, String> parsedSensorData; // TP01:+000.0
+    private String sensorCnt;
+    private List<String> sensorList;
+    private Map<String, String> sensorDataMap; // TP01:+000.0
+    private String dataListJson;
 
     // timestamp
     private String cliSentTime; // 클라이언트가 데이터를 보낸 시간

@@ -1,11 +1,10 @@
-package com.example.daq_monitoring_sw.tcp.dto;
+package com.example.daq_monitoring_sw.tcp.util;
 
+import com.example.daq_monitoring_sw.tcp.common.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Setter;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;

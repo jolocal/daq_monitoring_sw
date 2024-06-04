@@ -1,5 +1,6 @@
 package com.example.daq_monitoring_sw.tcp.dto;
 
+import com.example.daq_monitoring_sw.tcp.common.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,17 +11,16 @@ import java.util.Map;
 @Data
 @AllArgsConstructor
 @Builder
-public class SensorDataResponse {
+public class RqInfoRes {
 
-    private String daqId;
+    private String daqName;
     private Status status;
-    private String channelId;
     private String readTo;
-    private List<String> resDataList;
-    private String timeStamp;
+    private List<String> packetList;
+    private String cliSentTime;
 
-    private Integer sensorCnt;
-    private List<String> sensorIdsOrder;
+    private String sensorCnt;
+    private List<String> sensorList;
     private Map<String,String> parsedSensorData;
 
     String msg;

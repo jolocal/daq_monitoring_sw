@@ -1,6 +1,6 @@
 package com.example.daq_monitoring_sw.web.controller;
 
-import com.example.daq_monitoring_sw.tcp.dto.DaqCenter;
+import com.example.daq_monitoring_sw.tcp.util.DaqCenter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

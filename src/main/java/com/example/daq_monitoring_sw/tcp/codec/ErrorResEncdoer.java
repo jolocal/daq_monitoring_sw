@@ -1,7 +1,6 @@
 package com.example.daq_monitoring_sw.tcp.codec;
 
 import com.example.daq_monitoring_sw.tcp.dto.ErrorResponse;
-import com.example.daq_monitoring_sw.tcp.dto.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;

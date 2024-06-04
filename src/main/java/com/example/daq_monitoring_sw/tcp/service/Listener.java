@@ -1,4 +1,4 @@
-package com.example.daq_monitoring_sw.tcp.pub_sub;
+package com.example.daq_monitoring_sw.tcp.service;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

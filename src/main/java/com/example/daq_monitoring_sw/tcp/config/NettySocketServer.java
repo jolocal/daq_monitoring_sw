@@ -15,7 +15,7 @@ import java.net.InetSocketAddress;
 @Slf4j
 @RequiredArgsConstructor
 @Component
-public class TcpServer {
+public class NettySocketServer {
     private final ServerBootstrap serverBootstrap;
     private final InetSocketAddress port;
     private final EventLoopGroup bossGroup;
@@ -25,13 +25,13 @@ public class TcpServer {
     @PostConstruct
     public void start(){
         try{
-            log.info("==================================================  Netty 서버를 시작합니다. ================================================== ");
+            log.info("==================================================  Netty 서버를 시작중... ================================================== ");
             // 서버 소켓을 특정 포트에 바인딩하고, 비동기 작업 결과를 기다림
             ChannelFuture serverChannelFuture = serverBootstrap.bind(port).sync();
 
             // 바인딩 결과로 생성된 서버 채널을 변수에 할당
             serverChannel = serverChannelFuture.channel();
-            log.info("[ 포트: {} ] ", port.getPort());
+            log.info("==================================================  Netty 서버 [ 포트: {} ] 에서 시작 ================================================== ",port.getPort());
         } catch (InterruptedException e){
             log.error("Netty 서버 시작 중 오류 발생: {}", e.getMessage(), e);
             Thread.currentThread().interrupt();
@@ -39,7 +39,7 @@ public class TcpServer {
     }
 
     /*
-    * 바인딩 된 NettyServer 종료
+    * 바인딩 된 NettySocketServer 종료
     */
     @PreDestroy
     public void stop() throws InterruptedException{

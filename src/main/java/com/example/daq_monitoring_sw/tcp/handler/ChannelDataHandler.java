@@ -1,8 +1,10 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
+import com.example.daq_monitoring_sw.tcp.common.ChannelManager;
+import com.example.daq_monitoring_sw.tcp.common.Client;
+import com.example.daq_monitoring_sw.tcp.common.Status;
 import com.example.daq_monitoring_sw.tcp.dto.*;
-import com.example.daq_monitoring_sw.tcp.pub_sub.ProcessingDataService;
-import com.example.daq_monitoring_sw.tcp.util.ChannelRepository;
+import com.example.daq_monitoring_sw.tcp.service.ProcessingDataService;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -15,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTER_KEY;
 
 @Slf4j
 @Component
@@ -23,114 +24,124 @@ import static com.example.daq_monitoring_sw.tcp.util.ChannelRepository.DAQ_CENTE
 @Sharable
 public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest> {
 
-    private final ChannelRepository channelRepository;
     private final ProcessingDataService dataManager;
-
+    private final ChannelManager channelManager;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UserRequest userReq) throws Exception {
-        log.debug("메시지 수신: {}", userReq);
-        DaqCenter currentChannel = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        log.debug("=============================== 받은 메시지 ===============================");
+        log.debug(String.valueOf(userReq));
+        log.debug("=========================================================================");
 
-        if (currentChannel != null) {
-            switch (currentChannel.getStatus()) {
-                case IN -> {
-                    return;
-                }
-                case WD -> handleWDCommand(userReq);
-                case RQ -> handleRQCommand(ctx, currentChannel, userReq);
-                case ST -> handleSTCommand(ctx, currentChannel, userReq);
-                default -> throw new IllegalStateException("예상치 못한 상태: " + currentChannel.getStatus());
+        // DaqEntity currentChannel = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        Client client = channelManager.getClientInfo(ctx.channel());
+        Status status = client.getStatus();
+
+        switch (status) {
+            case IN -> {
+                return;
             }
-        } else {
-            throw new IllegalStateException("NETTY 채널에 저장된 사용자 정보가 없습니다.");
+            case WD -> handleWDCommand(userReq);
+            case RQ -> handleRQCommand(ctx, userReq);
+            case ST -> handleSTCommand(ctx, client, userReq);
+            default -> throw new IllegalStateException("예상치 못한 상태: " + client.getStatus());
         }
     }
 
     // 'WD' 쓰기
     private void handleWDCommand(UserRequest userReq) {
-        log.info("'WD' 명령 처리 - DAQ ID: {}", userReq.getDaqId());
+        log.info("'WD' 명령 처리 - DAQ ID: {}", userReq.getDaqName());
         dataManager.writeData(userReq);
     }
 
     // 'RQ' 읽기 응답
-    private void handleRQCommand(ChannelHandlerContext ctx, DaqCenter currentChannel, UserRequest userReq) {
-        log.info("'RQ' 명령 처리 - ChannelId: {} for DAQID: {}", currentChannel.getChannelId(), currentChannel.getReadTo());
-        Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
+    private void handleRQCommand(ChannelHandlerContext ctx, UserRequest userReq) {
+        Client client = channelManager.getClientInfo(ctx.channel());
 
-        wdActiveChannel.ifPresentOrElse(currentWdDaqcenter -> {
-            log.info("활성화된 WD 채널 정보: {}", currentWdDaqcenter);
-            SensorDataResponse firstRes = createFirstRes(currentWdDaqcenter);
+        log.info("'RQ' 명령 처리 - daqName: {} for DAQID: {}", userReq.getDaqName(), userReq.getReadTo());
+
+        Optional<Client> activeCliByDaqName = channelManager.findActiveCliByDaqName(userReq.getReadTo());
+        log.info("활성화된 WD 채널 정보: {}", activeCliByDaqName);
+
+        activeCliByDaqName.ifPresentOrElse(curWDcli -> {
+            log.info("활성화된 WD 채널 정보: {}", curWDcli);
+
+            RqInfoRes firstRes = createFirstRes(curWDcli);
+
             ctx.writeAndFlush(firstRes).addListener(future -> {
                 if (future.isSuccess()) {
                     // 첫번째 응답 전송 후 리스너 등록
-                    // 리스너 등록 및 데이터 발행
-                    regListenerAndDataPub(ctx, currentChannel);
+                    regListenerAndDataPub(ctx, userReq);
                 } else {
-                    log.error("첫 번째 응답 전송 실패: {}", future.cause());
+                    log.error("첫 번째 응답 전송 실패: ", future.cause());
                 }
             });
         }, () -> {
-            log.info("활성화된 WD 채널이 없음.");
-            ErrorResponse noWdResponse = createNoWdResponse(currentChannel);
+            log.debug("활성화된 WD 채널이 없음.");
+            ErrorResponse noWdResponse = createNoWdResponse(client);
             // 응답 전송 후 채널 닫기
             ctx.writeAndFlush(noWdResponse).addListener(ChannelFutureListener.CLOSE);
         });
 
     }
 
-    private ErrorResponse createNoWdResponse(DaqCenter currentChannel) {
+    private ErrorResponse createNoWdResponse(Client client) {
         return ErrorResponse.builder()
                 .status(Status.ER)
-                .msg("No active WD channel found for DAQ ID: " + currentChannel.getReadTo())
+                .msg("No active WD channel found for DAQ ID: " + client.getReadTo())
                 .build();
     }
 
 
     // 'ST' 종료
-    private void handleSTCommand(ChannelHandlerContext ctx, DaqCenter currentChannel, UserRequest userReq) {
-        log.info("'ST' 명령 처리 - DAQ ID: {}", currentChannel.getDaqId());
+    private void handleSTCommand(ChannelHandlerContext ctx, Client client, UserRequest userReq) {
+        log.info("'ST' 명령 처리 - DAQ ID: {}", client.getDaqName());
 
-        if (currentChannel.getPreviousStatus() == Status.WD) {
-            dataManager.stopAndCleanup(userReq.getDaqId());
+        if (client.getPreviousStatus() == Status.WD) {
+            dataManager.stopAndCleanup(userReq.getDaqName());
         }
 
-        if (currentChannel.getPreviousStatus() == Status.RQ) {
-            dataManager.unSubscribe(currentChannel.getReadTo(), currentChannel.getChannelId());
+        if (client.getPreviousStatus() == Status.RQ) {
+            dataManager.unSubscribe(userReq.getReadTo(), userReq.getDaqName());
         }
-        currentChannel.setCleanupDone(true);
+        client.setCleanupDone(true);
         // 채널 비활성화 이벤트를 다음 핸들러로 전달하여 ChannelManagerHandler의 channelInactive가 호출되도록 함
         ctx.fireChannelInactive();
 
     }
 
     // RQ 첫번째 응답
-    private SensorDataResponse createFirstRes(DaqCenter currentDaqcenter) {
+    private RqInfoRes createFirstRes(Client curWDcli) {
+        log.info("현재 활성화된 채널의 정보: {}", curWDcli);
         // 1차 응답 생성 로직
-        return SensorDataResponse.builder()
+        RqInfoRes resRQ = RqInfoRes.builder()
                 .status(Status.RS)
-                .daqId(currentDaqcenter.getDaqId())
-                .sensorCnt(currentDaqcenter.getSensorCnt())
-                .sensorIdsOrder(currentDaqcenter.getSensorIdsOrder())
-                .build()
-                ;
+                .daqName(curWDcli.getDaqName())
+                .sensorCnt(curWDcli.getSensorCnt())
+                .sensorList(curWDcli.getSensorList())
+                .build();
+
+        log.info("resRQ: {}", resRQ);
+
+        return resRQ;
     }
 
     // 리스너 등록 및 데이터 발행
-    private void regListenerAndDataPub(ChannelHandlerContext ctx, DaqCenter currentChannel) {
-        String channelId = currentChannel.getChannelId();
-        String subscribeKey = currentChannel.getReadTo();
+    private void regListenerAndDataPub(ChannelHandlerContext ctx, UserRequest userRequest) {
 
-        dataManager.subscribe(subscribeKey, channelId, ctx, packetList -> {
-            log.info("데이터 발행: {} - {}", channelId, packetList.toString());
+        Client client = channelManager.getClientInfo(ctx.channel());
 
-            if (packetList.isEmpty()) {
-                log.warn("빈 패킷 리스트 수신 - DAQ ID: {}", currentChannel.getDaqId());
-                return;
-            }
+        String readTo = userRequest.getReadTo(); // 읽을 daqcenter -> subscriberkey
+        String daqName = userRequest.getDaqName(); // subscriber
+
+        log.info("client: {}" ,client);
+        log.info("userRequest: {}" ,userRequest);
+
+        dataManager.subscribe(readTo, daqName, ctx, packetList -> {
+            log.info("데이터 발행: {} - {}", daqName, packetList.toString());
 
             // 응답 생성
-            SensorDataResponse response = createResponse(subscribeKey, packetList);
+            RqInfoRes response = createResponse(readTo, packetList);
             log.info("response: {}", response);
 
             // 응답 전송
@@ -141,20 +152,22 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
         });
     }
 
-    private SensorDataResponse createResponse(String subscribeKey, List<String> packetList) {
+    private RqInfoRes createResponse(String readTo, List<String> packetList) {
         String timeStamp = packetList.get(0);
         List<String> resDataList = new ArrayList<>(packetList.subList(1, packetList.size()));
 
-        return SensorDataResponse.builder()
+        RqInfoRes rqInfoRes = RqInfoRes.builder()
                 .status(Status.RD)
-                .readTo(subscribeKey)
-                .sensorCnt(resDataList.size())
-                .timeStamp(timeStamp)
-                .resDataList(resDataList)
+                .readTo(readTo)
+                .sensorCnt(String.valueOf(packetList.size()))
+                .cliSentTime(timeStamp)
+                .packetList(resDataList)
                 .build();
+        log.info("rqInfoRes: {}", rqInfoRes);
+        return rqInfoRes;
     }
 
-    private void sendResponse(ChannelHandlerContext ctx, SensorDataResponse response) {
+    private void sendResponse(ChannelHandlerContext ctx, RqInfoRes response) {
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(response).addListener(future -> {
                 if (!future.isSuccess()) {
@@ -168,7 +181,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
 
 /*    private void cleanupChannel(ChannelHandlerContext ctx) {
-        DaqCenter currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        DaqEntity currentDaqCenter = ctx.channel().attr(DAQ_CENTER_KEY).get();
         if (currentDaqCenter != null) {
             performCleanup(currentDaqCenter, currentDaqCenter.getDaqId(), ctx);
             channelRepository.removeChannel(currentDaqCenter.getDaqId());
@@ -177,7 +190,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
         ctx.close();
     }
 
-    private void performCleanup(DaqCenter currentDaqCenter, String daqId, ChannelHandlerContext ctx) {
+    private void performCleanup(DaqEntity currentDaqCenter, String daqId, ChannelHandlerContext ctx) {
         if (!currentDaqCenter.isCleanupDone()) {
             if (currentDaqCenter.getPreviousStatus() == Status.WD) {
                 log.info("[performCleanup] 데이터 발행 중지 및 클린업 시작 - DAQ ID: {}", daqId);
@@ -200,7 +213,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 }
 
  /*       log.debug("Received message: {}", userReq);
-        DaqCenter currentChannel = ctx.channel().attr(DAQ_CENTER_KEY).get();
+        DaqEntity currentChannel = ctx.channel().attr(DAQ_CENTER_KEY).get();
 
         if (currentChannel != null) {
             switch (currentChannel.getStatus()) {
@@ -216,11 +229,11 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                 case RQ -> {
                     log.info("Processing 'RQ' command for DAQ ID: {}", currentChannel.getDaqId());
                     // wd-channel 확인
-                    Optional<DaqCenter> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
+                    Optional<DaqEntity> wdActiveChannel = channelRepository.findChannel(userReq.getReadTo());
 
                     wdActiveChannel.ifPresentOrElse(currentWdDaqcenter -> {
                         log.info("활성화 중인 'WD' 채널 정보: {}",  currentWdDaqcenter);
-                        SensorDataResponse firstRes = createFirstRes(currentWdDaqcenter);
+                        RqInfoRes firstRes = createFirstRes(currentWdDaqcenter);
                         ctx.writeAndFlush(firstRes);
                     }, () -> log.info("활성화된 'WD' 채널이 없습니다. 리스너 등록을 진행합니다."));
 
@@ -233,9 +246,9 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 //                    } else {
 //                        // WD 사용자가 존재할 경우의 추가 로직
 //                        // RS: 1차응답
-//                        DaqCenter currentWdDaqcenter = wdActiveChannel.get();
+//                        DaqEntity currentWdDaqcenter = wdActiveChannel.get();
 //                        log.info("활성화 중인 WD 채널 정보: {}", currentWdDaqcenter);
-//                        SensorDataResponse firstRes = createFirstRes(currentWdDaqcenter);
+//                        RqInfoRes firstRes = createFirstRes(currentWdDaqcenter);
 //                        ctx.writeAndFlush(firstRes);
 //                    }
 
@@ -258,7 +271,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
                         String timeStamp = packetList.get(0);
                         List<String> resDataList = new ArrayList<>(packetList.subList(1, packetList.size()));
 
-                        SensorDataResponse response = SensorDataResponse.builder()
+                        RqInfoRes response = RqInfoRes.builder()
                                 .status(Status.RD)
                                 .readTo(subscribeKey)
                                 .sensorCnt(resDataList.size())
