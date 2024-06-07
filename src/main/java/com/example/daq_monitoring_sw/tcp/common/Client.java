@@ -21,6 +21,7 @@ public class Client {
 
     private List<String> sensorList;
     private String sensorCnt;
+    private String cliSentTime;
 
     private LocalDateTime connectTime;
     private LocalDateTime lastActiveTime;

@@ -25,6 +25,8 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: dactech
     password: 9531
+    hikari:
+      transaction-isolation: TRANSACTION_READ_COMMITTED
 
   jpa:
     database: mysql

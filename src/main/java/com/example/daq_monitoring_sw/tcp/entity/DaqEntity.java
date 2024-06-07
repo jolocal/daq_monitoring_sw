@@ -10,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Type;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -19,7 +21,7 @@ import org.hibernate.annotations.Type;
 public class DaqEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long daq_id;
+    private int  daq_id;
 
     @Column(name = "daq_name")
     private String daqName;
@@ -45,17 +47,8 @@ public class DaqEntity {
     @Column(name = "trans_delay")
     private String transDelay; // 지연시간
 
+    @Column(name = "db_save_time")
+    private LocalDateTime dbSaveTime; // db 저장시간
 
-    public DaqEntity daqCenterToEntity(UserRequest userRequest){
-        return DaqEntity.builder()
-                .daqName(userRequest.getDaqName())
-                .status(userRequest.getStatus())
-                .sensorCnt(Integer.parseInt(userRequest.getSensorCnt()))
-                .dataList(userRequest.getSensorDataMap().toString())
-                .cliSentTime(userRequest.getCliSentTime())
-                .servRecvTime(userRequest.getServRecvTime())
-                .transDelay(userRequest.getTransDelay())
-                .build();
-    }
 
 }

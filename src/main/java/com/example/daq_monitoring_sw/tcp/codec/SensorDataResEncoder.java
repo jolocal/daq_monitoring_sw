@@ -45,7 +45,7 @@ public class SensorDataResEncoder extends MessageToByteEncoder<RqInfoRes> {
                     body.writeBytes(cnt.getBytes(StandardCharsets.UTF_8));
 //                    String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
 
-                    String cliSentTime = res.getCliSentTime();
+                    String cliSentTime = res.getCliSentTime(); // HH:mm:ss.SSS
                     body.writeBytes(cliSentTime.getBytes(StandardCharsets.UTF_8));
 
                     // 센서 데이터를 바이트로 변환하여 body에 쓰기

@@ -30,7 +30,6 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     private List<String> sensorList = new ArrayList<>();
     private String cliSentTime;
 
-
     @Autowired
     public ReqDecoder(ChannelManager channelManager) {
         super(ProtocolState.STX);
@@ -91,11 +90,9 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
         Client client = channelManager.getClientInfo(ctx.channel());
 
         switch (command) {
-            // 최초 로그인 ( 채널에 데이터 저장 및 dto 저장)
-            case "IN":
+            case "IN": // channel에 저장
                 daqName = readLength(in, 5);
                 sensorCnt = readLength(in, 2);
-
 
                 int cnt = Integer.parseInt(sensorCnt);
                 for (int i = 0; i < cnt; i++) {
@@ -103,16 +100,13 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     sensorList.add(sensorId);
                 }
 
+                // 채널 - client 객체 저장
                 client.setStatus(Status.IN);
                 client.setDaqName(daqName);
                 client.setSensorCnt(sensorCnt);
                 client.setSensorList(sensorList);
-
                 // 채널에 daqName 업데이트.
                 channelManager.updateDaqName(ctx.channel(),daqName);
-
-                log.info("Updated Client Info: daqName={}, sensorCnt={}, sensorList={}",
-                        client.getDaqName(), client.getSensorCnt(), client.getSensorList());
 
                 checkpoint(ProtocolState.ETX);
                 break;
@@ -120,19 +114,22 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
 
             case "WD":
+                List<String> sensorList1 = client.getSensorList();
 
-                // 센서갯수
                 sensorCnt = readLength(in, 2);
-                // cliSentTime
                 cliSentTime = readLength(in, 12); // HH:MM:SS.mmm
 
                 int cnt1 = Integer.parseInt(sensorCnt);
-                for (int i = 0, sensorIdIndex = 0; i < cnt1; i++) {
-                    String parsedData = processRawData(in, 5); // 데이터 파싱
-                    String sensorName = sensorList.get(i);
+                for (int i = 0; i < cnt1; i++) {
+                    String parsedData = processRawData(in, 5); // 데이터 파싱 000.0
+                    String sensorName = sensorList1.get(i);
 
-                    sensorDataMap.put(sensorName, parsedData); // 파싱된 데이터 저장
-                    sensorIdIndex++;
+                    // 유효한 데이터만 저장
+                    if (isValidData(parsedData)){
+                        sensorDataMap.put(sensorName, parsedData);
+                    } else {
+                        sensorDataMap.put(sensorName, "+000.0");
+                    }
                 }
 
                 client.setStatus(Status.WD);
@@ -143,7 +140,11 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 daqName = readLength(in, 5);
                 readTo = readLength(in, 5);
 
+                // 채널 - client 객체 저장
                 client.setStatus(Status.RQ);
+                client.setReadTo(readTo);
+                client.setDaqName(daqName);
+
                 checkpoint(ProtocolState.ETX);
                 break;
 
@@ -156,6 +157,11 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 break;
 
         }
+    }
+
+    // +-000.0
+    private boolean isValidData(String data) {
+        return data.matches("^[+-]\\d{3}\\.\\d$");
     }
 
     private String readLength(ByteBuf in, int length) {
@@ -171,6 +177,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
     private String processRawData(ByteBuf in, int length) {
         String rawData = readLength(in, length);
+
         // 첫 번째 문자가 '0'인 경우 '+'로 변경
         if (rawData.startsWith("0")) {
             rawData = "+" + rawData.substring(1);
