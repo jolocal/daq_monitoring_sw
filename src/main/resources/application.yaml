@@ -40,7 +40,7 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: true
-    show_sql: true
+    show_sql: false
 
 server:
   port: 9531
