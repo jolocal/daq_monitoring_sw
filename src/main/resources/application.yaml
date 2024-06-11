@@ -1,6 +1,6 @@
 netty:
-  port: 1433
-#  port: 1715
+#  port: 1433
+  port: 1715
   boss-count: 1    # Netty boss 쓰레드 개수
   worker-count: 4  # Netty worker 쓰레드 개수
   keep-alive: true # TCP keep-alive 설정
@@ -40,7 +40,7 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: true
-    show_sql: true
+    show_sql: false
 
 server:
   port: 9531

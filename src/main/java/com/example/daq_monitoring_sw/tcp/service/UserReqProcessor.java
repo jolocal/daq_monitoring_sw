@@ -1,29 +1,22 @@
 package com.example.daq_monitoring_sw.tcp.service;
 
-import com.example.daq_monitoring_sw.tcp.batch.BatchScheduler;
+import com.example.daq_monitoring_sw.tcp.batch.SchedulerConfig;
+import com.example.daq_monitoring_sw.tcp.batch.TriggerBatchJobEvent;
 import com.example.daq_monitoring_sw.tcp.common.JsonConverter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import javax.print.DocFlavor;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,7 +24,7 @@ import java.util.stream.Collectors;
 public class UserReqProcessor {
 
     private final JsonConverter jsonConverter;
-    private final BatchScheduler batchScheduler;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Getter
     private final ConcurrentLinkedQueue<UserRequest> userRequestsQueue = new ConcurrentLinkedQueue<>();
@@ -39,6 +32,20 @@ public class UserReqProcessor {
     public void process(UserRequest userRequest) {
         processTimestamp(userRequest);
         convertToJson(userRequest);
+        userRequestsQueue.add(userRequest);
+
+        log.info("UserRequest가 큐에 추가됨. 현재 큐 크기: {}", userRequestsQueue.size());
+
+        // 큐에 데이터가 처음 쌓일 때 이벤트 발생
+        if (shouldTriggerBatchJob(userRequest)) {
+            log.info("큐에 첫 번째 UserRequest 추가됨, 배치 작업 이벤트 트리거");
+            eventPublisher.publishEvent(new TriggerBatchJobEvent(this));
+        }
+    }
+
+    private boolean shouldTriggerBatchJob(UserRequest userRequest) {
+        // 특정 조건 평가 로직
+        return userRequestsQueue.size() == 1;
     }
 
 
@@ -85,14 +92,7 @@ public class UserReqProcessor {
         try{
             String dataListJson = jsonConverter.toJson(userRequest.getSensorDataMap());
             userRequest.setDataListJson(dataListJson);
-            userRequestsQueue.add(userRequest);
-
-            log.info("userRequestQueue:{}", userRequest);
-
-            // 큐에 데이터가 처음 추가되면 스케줄러 시작
-            batchScheduler.startScheduler();
-
-
+            log.info("JSON 변환 완료: {}", userRequest);
         } catch (JsonProcessingException e) {
             log.error("JSON 변환 오류: {}", e.getMessage(), e);
         }

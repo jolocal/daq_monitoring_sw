@@ -1,5 +1,6 @@
 package com.example.daq_monitoring_sw.tcp.handler;
 
+import com.example.daq_monitoring_sw.tcp.batch.SchedulerConfig;
 import com.example.daq_monitoring_sw.tcp.common.ChannelManager;
 import com.example.daq_monitoring_sw.tcp.common.Client;
 import com.example.daq_monitoring_sw.tcp.common.Status;
@@ -26,6 +27,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<UserRequest>
 
     private final ProcessingDataService dataManager;
     private final ChannelManager channelManager;
+    private final SchedulerConfig schedulerConfig;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, UserRequest userReq) throws Exception {

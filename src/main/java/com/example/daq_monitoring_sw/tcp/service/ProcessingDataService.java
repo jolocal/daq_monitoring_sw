@@ -1,21 +1,12 @@
 package com.example.daq_monitoring_sw.tcp.service;
 
-import com.example.daq_monitoring_sw.tcp.common.JsonConverter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
-import com.example.daq_monitoring_sw.tcp.entity.DaqEntity;
-import com.example.daq_monitoring_sw.tcp.repository.DaqCenterRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.*;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.List;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -24,6 +15,7 @@ import java.util.function.Consumer;
 public class ProcessingDataService {
     private final UserReqProcessor userRequestProcessor;
     private final SubscriberNotifier subscriberNotifier;
+    //private final BatchScheduler batchScheduler;
 
 
     public void writeData(UserRequest userRequest) {
@@ -43,7 +35,8 @@ public class ProcessingDataService {
     public void stopAndCleanup(String daqId) {
         try {
             log.info("[WD-ST] WD사용자 프로세스 종료 및 리소스 정리 작업 시작");
-            // db 저장
+            // db 저장 종료
+            //batchScheduler.stopScheduler();
 
         } catch (Exception e) {
             log.error("[WD-stopAndCleanup] 예외 발생 - 원인: {}", e.getMessage(), e);
