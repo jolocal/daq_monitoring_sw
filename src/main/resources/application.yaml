@@ -22,7 +22,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    url: jdbc:mysql://192.168.0.75:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: dactech
     password: 9531
     hikari:
