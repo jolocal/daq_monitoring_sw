@@ -29,6 +29,23 @@ public class SchedulerConfig {
     private final Object lock = new Object(); // 동기화 블록을 위한 락 객체
     private boolean isScheduled = false; // 배치 작업이 예약되었는지 여부를 추적
 
+    // 배치 작업을 예약하는 메서드
+    public void triggerBatchJob() {
+        synchronized (lock) {
+            if (!isScheduled) {  // 배치 작업이 이미 예약되지 않은 경우에만 예약
+                log.info(">>>>>>>>>>>>>>>>>>>> 배치 작업 예약됨 - 시간: {}", new Date(System.currentTimeMillis())); // 배치 작업 예약 로그
+                isScheduled = true;  // 배치 작업을 예약 상태로 설정
+                taskScheduler.schedule(() -> {
+                    try {
+                        runBatchJob();
+                    } catch (Exception e) {
+                        log.error(">>>>>>>>>>>>>>>>>>>> 배치 작업 실행 오류", e);
+                    }
+                }, new Date(System.currentTimeMillis() + 60000));  // 1분 후에 배치 작업 실행 예약
+            }
+        }
+    }
+
     // 1분마다 실행되는 배치 작업 메서드
     @Scheduled(fixedRate = 60000)
     public void runBatchJob() throws Exception {
@@ -49,20 +66,4 @@ public class SchedulerConfig {
         }
     }
 
-    // 배치 작업을 예약하는 메서드
-    public void triggerBatchJob() {
-        synchronized (lock) {
-            if (!isScheduled) {  // 배치 작업이 이미 예약되지 않은 경우에만 예약
-                log.info(">>>>>>>>>>>>>>>>>>>> 배치 작업 예약됨 - 시간: {}", new Date(System.currentTimeMillis())); // 배치 작업 예약 로그
-                isScheduled = true;  // 배치 작업을 예약 상태로 설정
-                taskScheduler.schedule(() -> {
-                    try {
-                        runBatchJob();
-                    } catch (Exception e) {
-                        log.error(">>>>>>>>>>>>>>>>>>>> 배치 작업 실행 오류", e);
-                    }
-                }, new Date(System.currentTimeMillis() + 60000));  // 1분 후에 배치 작업 실행 예약
-            }
-        }
-    }
 }
