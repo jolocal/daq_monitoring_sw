@@ -21,7 +21,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.time.LocalDateTime;
 
 @Configuration
-@EnableBatchProcessing
+//@EnableBatchProcessing
 @RequiredArgsConstructor
 @Slf4j
 public class BatchConfigTest {
