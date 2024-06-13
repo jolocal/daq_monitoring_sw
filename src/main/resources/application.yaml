@@ -15,10 +15,10 @@ logging:
 
 spring:
   batch:
-    job:
-      enabled: true
     jdbc:
       initialize-schema: always
+    job:
+      enabled: true
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
