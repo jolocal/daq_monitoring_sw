@@ -39,7 +39,10 @@ public class SchedulerConfig {
                     .addLong("startAt", System.currentTimeMillis())  // 현재 시간을 매개변수로 추가
                     .toJobParameters();
 
+            log.info(">>>>>>>>>>>>>>>>>>>> 배치 작업 시작 - 시간: {}", new Date(System.currentTimeMillis())); // 배치 작업 시작 로그
             jobLauncher.run(userRequestJob, jobParameters); // 배치 작업 실행
+            log.info(">>>>>>>>>>>>>>>>>>>> 배치 작업 실행됨 - 매개변수: {}", jobParameters); // 배치 작업 실행 로그
+
             isScheduled = true; // 주기적으로 배치 작업을 계속 실행
 
             log.info("배치 작업 실행됨");
@@ -50,13 +53,13 @@ public class SchedulerConfig {
     public void triggerBatchJob() {
         synchronized (lock) {
             if (!isScheduled) {  // 배치 작업이 이미 예약되지 않은 경우에만 예약
-                log.info("배치 작업 예약됨");
+                log.info(">>>>>>>>>>>>>>>>>>>> 배치 작업 예약됨 - 시간: {}", new Date(System.currentTimeMillis())); // 배치 작업 예약 로그
                 isScheduled = true;  // 배치 작업을 예약 상태로 설정
                 taskScheduler.schedule(() -> {
                     try {
                         runBatchJob();
                     } catch (Exception e) {
-                        log.error("배치 작업 실행 오류", e);
+                        log.error(">>>>>>>>>>>>>>>>>>>> 배치 작업 실행 오류", e);
                     }
                 }, new Date(System.currentTimeMillis() + 60000));  // 1분 후에 배치 작업 실행 예약
             }
