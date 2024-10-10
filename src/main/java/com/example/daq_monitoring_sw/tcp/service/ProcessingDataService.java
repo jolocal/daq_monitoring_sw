@@ -15,7 +15,6 @@ import java.util.function.Consumer;
 public class ProcessingDataService {
     private final UserReqProcessor userRequestProcessor;
     private final SubscriberNotifier subscriberNotifier;
-    //private final BatchScheduler batchScheduler;
 
 
     public void writeData(UserRequest userRequest) {

@@ -1,6 +1,5 @@
 package com.example.daq_monitoring_sw.tcp.service;
 
-import com.example.daq_monitoring_sw.tcp.batch.SchedulerConfig;
 import com.example.daq_monitoring_sw.tcp.batch.TriggerBatchJobEvent;
 import com.example.daq_monitoring_sw.tcp.common.JsonConverter;
 import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
