@@ -105,6 +105,12 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                 client.setDaqName(daqName);
                 client.setSensorCnt(sensorCnt);
                 client.setSensorList(sensorList);
+
+                ChannelId channelId = ctx.channel().id();
+                log.info(">>>>>>>>> wd channelId:{}", channelId);
+                log.info("sensorList:{}", sensorList);
+                log.info("client:{}", client.toString());
+                log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>");
                 // 채널에 daqName 업데이트.
                 channelManager.updateDaqName(ctx.channel(),daqName);
 
@@ -114,10 +120,19 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
 
             case "WD":
+
+                ChannelId channelId2 = ctx.channel().id();
+
+                log.info(">>>>>>>>> wd channelId2:{}", channelId2);
                 List<String> sensorList1 = client.getSensorList();
+                log.info("client:{}", client.toString());
+                log.info("sensorList1 {}", sensorList1);
+                log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
 
                 sensorCnt = readLength(in, 2);
                 cliSentTime = readLength(in, 12); // HH:MM:SS.mmm
+
 
                 int cnt1 = Integer.parseInt(sensorCnt);
                 for (int i = 0; i < cnt1; i++) {

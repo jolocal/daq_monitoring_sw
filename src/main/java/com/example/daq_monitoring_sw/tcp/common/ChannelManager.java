@@ -59,7 +59,8 @@ public class ChannelManager {
 
     public void updateDaqName(Channel channel, String daqName) {
         Client client = clientInfoMap.get(channel.id());
-        if (client != null) {            log.info("클라이언트 정보 찾음 - Channel ID: {}, Client: {}", channel.id(), client);
+        if (client != null) {
+            log.info("클라이언트 정보 찾음 - Channel ID: {}, Client: {}", channel.id(), client);
             client.setDaqName(daqName);
             daqToChannelIdMap.put(daqName, channel.id());
             log.debug("클라이언트 DAQ 이름 설정 및 daqToChannelIdMap 값 추가 - DaqName: {}", daqName);

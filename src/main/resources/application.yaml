@@ -1,6 +1,7 @@
 netty:
 #  port: 1433
   port: 1715
+
   boss-count: 1    # Netty boss 쓰레드 개수
   worker-count: 4  # Netty worker 쓰레드 개수
   keep-alive: true # TCP keep-alive 설정
@@ -22,7 +23,12 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
+#    tcp 로컬버전
 #    url: jdbc:mysql://192.168.0.75:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+#    username: dactech
+#    password: 9531
+
+#    aws 배포버전
     url: jdbc:mysql://15.165.111.153:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: daq
     password: 9531
