@@ -75,7 +75,7 @@ public class BatchConfigTest {
                         .sensorCnt(Integer.parseInt(item.getSensorCnt()))
                         .dataList(item.getDataListJson())
                         .cliSentTime(item.getCliSentTime())
-                        .servRecvTime(item.getServRecvTime())
+                        .servRecvTime(String.valueOf(item.getServRecvTime()))
                         .transDelay(item.getTransDelay())
                         .dbSaveTime(LocalDateTime.now())
                         .build();

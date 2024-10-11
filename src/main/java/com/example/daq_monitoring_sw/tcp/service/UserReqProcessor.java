@@ -58,6 +58,7 @@ public class UserReqProcessor {
         userRequest.setTransDelay(delayFormatted);
         log.info("지연 시간: {}", delayFormatted);
     }
+
 //    }
 //        log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>> Process Timestamp... ");
 //        // 서버가 데이터를 받은 시간
