@@ -40,7 +40,7 @@ public class BatchConfigTest {
     @Bean
     public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
         return new StepBuilder("step1", jobRepository)
-                .<UserRequest, DaqEntity>chunk(10000, transactionManager)
+                .<UserRequest, DaqEntity>chunk(12000, transactionManager)
                 .reader(itemReader())
                 .processor(itemProcessor())
                 .writer(itemWriter())
