@@ -31,7 +31,7 @@ spring:
 #    aws 배포버전
     url: jdbc:mysql://15.165.111.153:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: daq
-    password: 9531153
+    password: 9531
     hikari:
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
