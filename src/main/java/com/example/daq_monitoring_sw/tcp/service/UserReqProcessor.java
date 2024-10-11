@@ -10,10 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -50,24 +47,36 @@ public class UserReqProcessor {
 
     // 시간 구하기
     private void processTimestamp(UserRequest userRequest){
-        log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>> Process Timestamp... ");
-        // 서버가 데이터를 받은 시간
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
-        LocalTime servRecvTime =  now.toLocalTime(); //  08:39:32.885666
+        LocalDateTime servRecvTime = userRequest.getServRecvTime();
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-        String format = formatter.format(servRecvTime);
-
-
-        String timeStr = userRequest.getCliSentTime();
-        LocalTime cliSentTime = formatLocalTime(timeStr);
+        LocalDateTime cliSentTime = LocalDateTime.parse(userRequest.getCliSentTime(), formatter);
 
         Duration delay = Duration.between(cliSentTime, servRecvTime);
-        String delayFormatted  = formatDuration(delay);
+        String delayFormatted = formatDuration(delay);
 
-        userRequest.setServRecvTime(format);
-        userRequest.setTransDelay(delayFormatted );
-
+        userRequest.setTransDelay(delayFormatted);
+        log.info("지연 시간: {}", delayFormatted);
     }
+//    }
+//        log.info(">>>>>>>>>>>>>>>>>>>>>>>>>>> Process Timestamp... ");
+//        // 서버가 데이터를 받은 시간
+//        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+//        LocalTime servRecvTime =  now.toLocalTime(); //  08:39:32.885666
+//        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+//        String format = formatter.format(servRecvTime);
+//
+//
+//        String timeStr = userRequest.getCliSentTime();
+//        LocalTime cliSentTime = formatLocalTime(timeStr);
+//
+//        Duration delay = Duration.between(cliSentTime, servRecvTime);
+//        String delayFormatted  = formatDuration(delay);
+//
+//        userRequest.setServRecvTime(format);
+//        userRequest.setTransDelay(delayFormatted );
+//
+//    }
 
     private String formatDuration(Duration duration) {
         long hours = duration.toHours();

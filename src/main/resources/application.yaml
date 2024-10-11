@@ -10,7 +10,7 @@ netty:
 logging:
   level:
     root: INFO
-    com.example.daq_monitoring_sw: DEBUG # 애플리케이션 패키지 로그 레벨 설정
+    com.example.daq_monitoring_sw: info # 애플리케이션 패키지 로그 레벨 설정
     org.springframework: INFO # Spring 관련 로그 레벨 설정
 
 
@@ -32,6 +32,7 @@ spring:
     url: jdbc:mysql://15.165.111.153:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: daq
     password: 9531
+
     hikari:
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
@@ -47,7 +48,7 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: true
-    show_sql: false
+    show_sql: true
 
 server:
   port: 9531

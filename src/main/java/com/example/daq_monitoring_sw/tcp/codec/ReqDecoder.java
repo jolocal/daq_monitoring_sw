@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
@@ -29,7 +31,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     private Map<String, String> sensorDataMap = new LinkedHashMap<>();
     private List<String> sensorList = new ArrayList<>();
     private String cliSentTime;
-
+    private LocalDateTime servRecvTime;
     @Autowired
     public ReqDecoder(ChannelManager channelManager) {
         super(ProtocolState.STX);
@@ -54,6 +56,16 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                 case COMMAND:
                     String command = readLength(in, 2);
+
+                    // WD 명령어일 경우에만 서버 수신 시간을 기록
+                    if ("WD".equals(command)) {
+                        servRecvTime = LocalDateTime.now();
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+                        String formattedReceiveTime = servRecvTime.format(formatter);
+                        log.info("서버 데이터 수신 시각: {}", formattedReceiveTime);
+                        client.setReceiveTime(formattedReceiveTime);
+                    }
+
                     switchCommandState(in, command, ctx);
                     break;
 
@@ -69,6 +81,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                             .sensorList(sensorList)
                             .sensorDataMap(sensorDataMap)
                             .cliSentTime(cliSentTime)
+                            .servRecvTime(servRecvTime) // 서버 수신 시간 추가
                             .build();
 
                     out.add(userRequest);

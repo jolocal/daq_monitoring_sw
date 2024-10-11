@@ -7,7 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +34,7 @@ public class UserRequest {
 
     // timestamp
     private String cliSentTime; // 클라이언트가 데이터를 보낸 시간
-    private String servRecvTime; // 서버가 데이터를 받은 시간
+    private LocalDateTime servRecvTime; // 서버가 데이터를 받은 시간
     private String transDelay; // 지연시간
 
     // 이전 상태

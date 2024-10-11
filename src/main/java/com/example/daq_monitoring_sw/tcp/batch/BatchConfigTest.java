@@ -54,7 +54,7 @@ public class BatchConfigTest {
             @Override
             public UserRequest read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
                 UserRequest request = userReqProcessor.getUserRequestsQueue().poll();
-                // log.info("ItemReader: UserRequest 읽음: {}", request);
+                log.info("ItemReader: UserRequest 읽음: {}", request);
                 return request;
             }
         };
@@ -67,7 +67,7 @@ public class BatchConfigTest {
         return new ItemProcessor<UserRequest, DaqEntity>() {
             @Override
             public DaqEntity process(UserRequest item) throws Exception {
-                // log.info("ItemProcessor: UserRequest 처리 중: {}", item);
+                log.info("ItemProcessor: UserRequest 처리 중: {}", item);
                 // dto -> entity
                 return DaqEntity.builder()
                         .daqName(item.getDaqName())
@@ -83,13 +83,14 @@ public class BatchConfigTest {
         };
     }
 
+    // 데이터베이스에 데이터 쓰기
     @Bean
     public ItemWriter<DaqEntity> itemWriter() {
         return new ItemWriter<DaqEntity>() {
             @Override
             public void write(Chunk<? extends DaqEntity> items) throws Exception {
                 // 데이터베이스에 쓰기 로직을 여기서 작성
-                // log.info("ItemWriter: DaqEntity 쓰기 중: {}", items);
+                log.info("ItemWriter: DaqEntity 쓰기 중: {}", items);
                 daqCenterRepository.saveAll(items.getItems());
             }
         };
