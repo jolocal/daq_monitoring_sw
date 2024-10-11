@@ -26,7 +26,6 @@ repositories {
 }
 
 dependencies {
-	implementation 'ch.qos.logback:logback-classic:1.2.11'
 // https://mvnrepository.com/artifact/io.netty/netty-all
 	implementation group: 'io.netty', name: 'netty-all', version: '4.1.114.Final'
 
