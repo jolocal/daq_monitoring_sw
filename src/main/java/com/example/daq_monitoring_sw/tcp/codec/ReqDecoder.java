@@ -15,7 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 
@@ -31,7 +33,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
     private Map<String, String> sensorDataMap = new LinkedHashMap<>();
     private List<String> sensorList = new ArrayList<>();
     private String cliSentTime;
-    private LocalDateTime servRecvTime;
+    private String formattedReceiveTime;
     @Autowired
     public ReqDecoder(ChannelManager channelManager) {
         super(ProtocolState.STX);
@@ -59,11 +61,12 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
 
                     // WD 명령어일 경우에만 서버 수신 시간을 기록
                     if ("WD".equals(command)) {
-                        servRecvTime = LocalDateTime.now();
+                        LocalTime servRecvTime = LocalTime.now().truncatedTo(ChronoUnit.MILLIS);  // 밀리초 단위로 자르기
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-                        String formattedReceiveTime = servRecvTime.format(formatter);
+                        formattedReceiveTime = servRecvTime.format(formatter);
+
                         log.info("서버 데이터 수신 시각: {}", formattedReceiveTime);
-                        client.setReceiveTime(formattedReceiveTime);
+                        client.setReceiveTime(formattedReceiveTime); // 서버 수신 시간을 HH:mm:ss.SSS 형식으로 저장
                     }
 
                     switchCommandState(in, command, ctx);
@@ -81,7 +84,7 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                             .sensorList(sensorList)
                             .sensorDataMap(sensorDataMap)
                             .cliSentTime(cliSentTime)
-                            .servRecvTime(servRecvTime) // 서버 수신 시간 추가
+                            .servRecvTime(formattedReceiveTime) // 서버 수신 시간 추가
                             .build();
 
                     out.add(userRequest);
