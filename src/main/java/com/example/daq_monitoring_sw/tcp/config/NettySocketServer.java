@@ -32,6 +32,7 @@ public class NettySocketServer {
             // 바인딩 결과로 생성된 서버 채널을 변수에 할당
             serverChannel = serverChannelFuture.channel();
             log.info("==================================================  Netty 서버 [ 포트: {} ] 에서 시작 ================================================== ",port.getPort());
+
         } catch (InterruptedException e){
             log.error("Netty 서버 시작 중 오류 발생: {}", e.getMessage(), e);
             Thread.currentThread().interrupt();

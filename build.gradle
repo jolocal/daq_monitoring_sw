@@ -29,6 +29,9 @@ dependencies {
 // https://mvnrepository.com/artifact/io.netty/netty-all
 	implementation group: 'io.netty', name: 'netty-all', version: '4.1.114.Final'
 
+	// https://mvnrepository.com/artifact/commons-net/commons-net
+	implementation group: 'commons-net', name: 'commons-net', version: '3.10.0'
+
 	// kafka
 	//implementation 'org.springframework.kafka:spring-kafka'
 

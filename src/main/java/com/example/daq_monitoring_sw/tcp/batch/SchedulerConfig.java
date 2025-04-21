@@ -47,7 +47,7 @@ public class SchedulerConfig {
     }
 
     // 1분마다 실행되는 배치 작업 메서드
-    @Scheduled(fixedRate = 60000) // (밀리초단위)
+    @Scheduled(fixedRate = 5000)
     public void runBatchJob() throws Exception {
         synchronized (lock) {
             if (!isScheduled) return; // 배치 작업이 예약되지 않았으면 실행하지 않음

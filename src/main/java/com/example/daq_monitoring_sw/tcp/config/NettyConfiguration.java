@@ -25,6 +25,8 @@ public class NettyConfiguration {
         b.group(bossGroup(), workerGroup())
                 .channel(NioServerSocketChannel.class) // 서버 소켓 채널의 타입 (비동기 I/O (NIO)를 사용하는 서버 소켓 채널)
                 .childHandler(channelInitializer); // 각 클라이언트 채널이 생성될 때 호출, 채널 파이프라인에 다양한 핸들러(예: 데이터 처리, 인코딩/디코딩, SSL/TLS 설정 등)를 추가.
+        b.option(ChannelOption.SO_RCVBUF, 1024 * 32);  // 수신 버퍼 크기 설정
+        b.option(ChannelOption.SO_SNDBUF, 1024 * 32);  // 송신 버퍼 크기 설정
         b.option(ChannelOption.SO_BACKLOG, nettyProperties.getBacklog()); // 백로그는 동시에 처리할 수 있는 대기 중인 연결 요청의 최대 수
         b.option(ChannelOption.AUTO_CLOSE, true); // 연결이 끝나면 자동으로 채널을 닫을 것인지를 설정
         b.option(ChannelOption.SO_REUSEADDR, true); // 소켓 주소를 재사용할 수 있게 하는 옵션 서버 재시작 시 주소가 이미 사용 중 오류를 방지하는데 도움
