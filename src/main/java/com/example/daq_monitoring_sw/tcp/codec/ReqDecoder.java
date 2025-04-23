@@ -60,14 +60,14 @@ public class ReqDecoder extends ReplayingDecoder<ProtocolState> {
                     String command = readLength(in, 2);
 
                     // WD 명령어일 경우에만 서버 수신 시간을 기록
-//                    if ("WD".equals(command)) {
-//                        LocalTime servRecvTime = LocalTime.now().truncatedTo(ChronoUnit.MILLIS);  // 밀리초 단위로 자르기
-//                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-//                        formattedReceiveTime = servRecvTime.format(formatter);
-//
-//                        log.info("서버 데이터 수신 시각: {}", formattedReceiveTime);
-//                        client.setReceiveTime(formattedReceiveTime); // 서버 수신 시간을 HH:mm:ss.SSS 형식으로 저장
-//                    }
+                    if ("WD".equals(command)) {
+                        LocalTime servRecvTime = LocalTime.now().truncatedTo(ChronoUnit.MILLIS);  // 밀리초 단위로 자르기
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+                        formattedReceiveTime = servRecvTime.format(formatter);
+
+                        log.info("서버 데이터 수신 시각: {}", formattedReceiveTime);
+                        client.setReceiveTime(formattedReceiveTime); // 서버 수신 시간을 HH:mm:ss.SSS 형식으로 저장
+                    }
 
                     switchCommandState(in, command, ctx);
                     break;

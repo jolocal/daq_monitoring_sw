@@ -10,7 +10,8 @@ netty:
 logging:
   level:
     root: INFO
-    com.example.daq_monitoring_sw: info # 애플리케이션 패키지 로그 레벨 설정
+    com.example.daq_monitoring_sw: DEBUG # 애플리케이션 패키지 로그 레벨 설정
+    io.netty: DEBUG
     org.springframework: INFO # Spring 관련 로그 레벨 설정
 
 

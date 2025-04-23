@@ -5,6 +5,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +26,7 @@ public class NettyConfiguration {
         ServerBootstrap b = new ServerBootstrap(); // 네티에서 서버 채널을 설정하고 초기화하는 데 사용
         b.group(bossGroup(), workerGroup())
                 .channel(NioServerSocketChannel.class) // 서버 소켓 채널의 타입 (비동기 I/O (NIO)를 사용하는 서버 소켓 채널)
+                .handler(new LoggingHandler(LogLevel.DEBUG))
                 .childHandler(channelInitializer); // 각 클라이언트 채널이 생성될 때 호출, 채널 파이프라인에 다양한 핸들러(예: 데이터 처리, 인코딩/디코딩, SSL/TLS 설정 등)를 추가.
         b.option(ChannelOption.SO_RCVBUF, 1024 * 32);  // 수신 버퍼 크기 설정
         b.option(ChannelOption.SO_SNDBUF, 1024 * 32);  // 송신 버퍼 크기 설정
