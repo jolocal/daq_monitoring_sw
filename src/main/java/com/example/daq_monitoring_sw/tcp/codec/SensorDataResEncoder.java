@@ -1,5 +1,6 @@
 package com.example.daq_monitoring_sw.tcp.codec;
 
+import com.example.daq_monitoring_sw.tcp.dto.Response;
 import com.example.daq_monitoring_sw.tcp.dto.RqInfoRes;
 import com.example.daq_monitoring_sw.tcp.common.Status;
 import io.netty.buffer.ByteBuf;
@@ -14,75 +15,57 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class SensorDataResEncoder extends MessageToByteEncoder<RqInfoRes> {
+public class SensorDataResEncoder extends MessageToByteEncoder<Response> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, RqInfoRes res, ByteBuf out) throws Exception {
-        log.info("Starting encode method for RqInfoRes: {}", res);
-        Status currentStatus = res.getStatus();
+    protected void encode(ChannelHandlerContext ctx, Response res, ByteBuf out) throws Exception {
 
-        // 본문 데이터 생성
+        String rsType = res.getRsType().toString();
         ByteBuf body = ctx.alloc().buffer();
-
         try {
-            switch (currentStatus) {
-                case RS:
-                    String daqName = res.getDaqName();
-                    log.info("daqName: {}",daqName);
-                    body.writeBytes(daqName.getBytes(StandardCharsets.UTF_8));
-
-                    String sensorCnt = res.getSensorCnt();
-                    log.info("getSensorCnt: {}", res.getSensorCnt());
-                    body.writeBytes(sensorCnt.getBytes(StandardCharsets.UTF_8));
-
-                    for (String sensorId : res.getSensorList()) {
-                        body.writeBytes(sensorId.getBytes(StandardCharsets.UTF_8));
-                    }
-                    break;
-
-                case RD:
-                    // 센서갯수
-                    String cnt = res.getSensorCnt();
-                    body.writeBytes(cnt.getBytes(StandardCharsets.UTF_8));
-//                    String sensorCnt_rd_str = String.format("%02d", sensorCnt_rd);
-
-                    String cliSentTime = res.getCliSentTime(); // HH:mm:ss.SSS
-                    body.writeBytes(cliSentTime.getBytes(StandardCharsets.UTF_8));
-
-                    // 센서 데이터를 바이트로 변환하여 body에 쓰기
-                    List<String> resDataList = res.getPacketList();
-                    for (String resData : resDataList) {
-                        byte[] dataBytes = resData.getBytes(StandardCharsets.UTF_8);
-                        body.writeBytes(dataBytes);
-                    }
-                    break;
-
-                default:
-                    throw new IllegalArgumentException("지원되지 않는 명령어 유형");
+            
+            if (rsType.equals("IS")){
+                body.writeBytes(res.getResult().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getRsType().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getTargetDeviceId().toString().getBytes(StandardCharsets.UTF_8));
+                List<String> sensorList = res.getSensorList(); // ["PF", "PB", ...]
+                for (String sid : sensorList) {
+                    String s2 = sid == null ? "" : sid;
+                    // 2바이트 고정: 부족하면 공백 패딩, 넘치면 자르기
+                    s2 = String.format("%-2s", s2).substring(0, 2);
+                    body.writeBytes(s2.getBytes(StandardCharsets.UTF_8));
+                }
+            } else if (rsType.equals("IE")){
+                body.writeBytes(res.getResult().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getRsType().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getMessage().toString().getBytes(StandardCharsets.UTF_8));
+            } else if (rsType.equals("IN")) {
+                body.writeBytes(res.getResult().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getRsType().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getMessage().toString().getBytes(StandardCharsets.UTF_8));
+            }
+            else {
+                body.writeBytes(res.getResult().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getRsType().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getDeviceId().toString().getBytes(StandardCharsets.UTF_8));
+                body.writeBytes(res.getMessage().toString().getBytes(StandardCharsets.UTF_8));
             }
 
-            // 헤더 작성
-            int fixLength = 7; // STX(1) +
-
-
-
-
-
-            // (3) + status(2) + ETX(1)
+            // 헤더
+            int fixLength = 7; 
             int totalLength = body.readableBytes() + fixLength;
             String totalLengthStr = String.format("%03d", totalLength);
-
             // stx
             out.writeByte(ProtocolState.STX.getValue());
             // 전체 패킷 길이
             out.writeBytes(totalLengthStr.getBytes(StandardCharsets.UTF_8));
             // command
-            out.writeBytes(currentStatus.toString().getBytes(StandardCharsets.UTF_8));
+            out.writeBytes(rsType.toString().getBytes(StandardCharsets.UTF_8));
             // body
             out.writeBytes(body);
             // etx
             out.writeByte(ProtocolState.ETX.getValue());
 
-            log.debug("Encoded Data: {}", out.toString(StandardCharsets.UTF_8));
+            log.debug("  ▷ [SensorDataResEncoder] Encoded Data: {}", out.toString(StandardCharsets.UTF_8));
 
         } finally {
             body.release();

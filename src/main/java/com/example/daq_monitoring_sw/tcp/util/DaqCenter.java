@@ -28,7 +28,7 @@ public class DaqCenter {
     private Map<String, String> parsedSensorData;
 
     private String cliSentTime;
-    private LocalTime servRecvTime;
+    private LocalTime srvRecvTime;
     private String transDelay;
 
     // 이전 상태

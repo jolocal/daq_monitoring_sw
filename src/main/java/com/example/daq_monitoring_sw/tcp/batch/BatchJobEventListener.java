@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class BatchJobEventListener {
-    private final SchedulerConfig schedulerConfig;
+    private final BatchScheduler schedulerConfig;
 
     @EventListener
     public void handleTriggerBatchJobEvent(TriggerBatchJobEvent event) {

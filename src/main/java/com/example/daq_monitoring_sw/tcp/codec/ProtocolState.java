@@ -14,6 +14,7 @@ public enum ProtocolState {
     SENSOR_CNT(null),
     SENSOR_ID(null),
     ETX((byte)0x03);
+    
     private final Byte value;
 
 }

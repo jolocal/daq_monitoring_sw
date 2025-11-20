@@ -1,27 +1,28 @@
 package com.example.daq_monitoring_sw.tcp.dto;
 
+import java.util.List;
+
 import com.example.daq_monitoring_sw.tcp.common.Status;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-
-import java.util.List;
-import java.util.Map;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class RqInfoRes {
-
-    private String deviceId;
-    private Status status;
+public class Response {
+    // common
+    private String result;
+    private Status rsType;
     private String targetDeviceId;
-    private List<String> packetList;
-    private String cliSentTime;
+    private String deviceId;
 
-    private int sensorCnt;
+    //private String targetDeviceId;
+    private String message;
+
     private List<String> sensorList;
-    private Map<String,String> parsedSensorData;
 
-    String msg;
 }

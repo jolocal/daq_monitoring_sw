@@ -1,6 +1,7 @@
 package com.example.daq_monitoring_sw.tcp.service;
 
-import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
+import com.example.daq_monitoring_sw.tcp.dto.Payloads;
+import com.example.daq_monitoring_sw.tcp.dto.ProtocolMessage;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,39 +13,37 @@ import java.util.function.Consumer;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProcessingDataService {
-    private final UserReqProcessor userRequestProcessor;
+public class MessageProcessorService {
+    private final MessageProcessor messageProcessor;
     private final SubscriberNotifier subscriberNotifier;
 
-
-    public void writeData(UserRequest userRequest) {
-        userRequestProcessor.process(userRequest);
-        subscriberNotifier.notifySubscribers(userRequest);
+    // 큐 적재 + 구독 통지
+    public void writeData(ProtocolMessage message) {
+        messageProcessor.process(message);          // 데이터 전처리 & 큐 추가
+        subscriberNotifier.notifyWDSubscribers(message); // 구독자에게 데이터 전달
     }
 
-    public void subscribe(String subscribeKey, String daqName, ChannelHandlerContext ctx, Consumer<List<String>> dataHandler) {
-        subscriberNotifier.subscribe(subscribeKey, daqName, ctx, dataHandler);
+    public void subscribe(String subscribeKey, String deviceId, ChannelHandlerContext ctx, Consumer<List<Payloads>> dataHandler) {
+        subscriberNotifier.subscribe(subscribeKey, deviceId, ctx, dataHandler);
     }
 
-    public void unSubscribe(String subscribeKey, String daqName) {
-        subscriberNotifier.unSubscribe(subscribeKey, daqName);
+    public void unSubscribe(String subscribeKey, String deviceId) {
+        subscriberNotifier.unSubscribe(subscribeKey, deviceId);
     }
 
 
-    public void stopAndCleanup(String daqId) {
+    public void stopAndCleanup(String deviceId) {
         try {
             log.info("[WD-ST] WD사용자 프로세스 종료 및 리소스 정리 작업 시작");
             // db 저장 종료
             //batchScheduler.stopScheduler();
-
         } catch (Exception e) {
             log.error("[WD-stopAndCleanup] 예외 발생 - 원인: {}", e.getMessage(), e);
         }
-
     }
 
 
-   /* private final DaqCenterRepository daqCenterRepository;
+/* private final DaqCenterRepository daqCenterRepository;
     private final JsonConverter jsonConverter;
 
 

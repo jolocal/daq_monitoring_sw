@@ -1,7 +1,7 @@
 package com.example.daq_monitoring_sw.tcp.entity;
 
 import com.example.daq_monitoring_sw.tcp.common.Status;
-import com.example.daq_monitoring_sw.tcp.dto.UserRequest;
+import com.example.daq_monitoring_sw.tcp.dto.ProtocolMessage;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -21,13 +21,13 @@ import java.time.LocalDateTime;
 public class DaqEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int  daq_id;
+    private Long  id;
 
-    @Column(name = "daq_name")
-    private String daqName;
+    @Column(name = "device_id")
+    private String deviceID;
 
-    @Enumerated(EnumType.STRING)
-    private Status status;
+    @Column(name = "status")
+    private String status;
 
     /////////// sensor ///////////
 
@@ -39,16 +39,19 @@ public class DaqEntity {
     private String dataList; // JSON
 
     @Column(name = "cli_sent_time")
-    private String cliSentTime; // 클라이언트가 데이터를 보낸시간
+    private String cliSentTime; // 클라이언트가 데이터를 보낸시간 (yyyyMMddHHmmssSSS)
 
-    @Column(name = "serv_recv_time")
-    private String servRecvTime; // 서버가 데이터를 받은 시간
+    @Column(name = "srv_recv_time")
+    private String srvRecvTime; // 서버가 데이터를 받은 시간 (yyyyMMddHHmmssSSS)
 
-    @Column(name = "trans_delay")
-    private String transDelay; // 지연시간
+    @Column(name = "latency")
+    private long latency; // 지연시간
 
-    @Column(name = "db_save_time")
-    private LocalDateTime dbSaveTime; // db 저장시간
+    @Column(name = "latency_str")
+    private String latencyStr; // 지연시간 포맷 (HH:mm:ss.SSS)
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt; // db 저장시간
 
 
 }

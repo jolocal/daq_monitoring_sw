@@ -8,9 +8,13 @@ import lombok.Getter;
 public enum Status {
 
     IN("INIT"),
+    IS("INIT_SUCCESS"),
+    IE("INIT_ERROR"),
     WD("WRITE"),
     RD("READ"),
     ST("STOP"),
+    DC("DATA_TO_CLIENT"),
+    
 
     RQ("REQUEST_TO_SERVER"),
     RS("RESPONSE_TO_CLIENT"),
@@ -19,7 +23,7 @@ public enum Status {
     DISCONNECTED("DISCONNECTED"),
     RECONNECTING("RECONNECTING"),
 
-    ER("ERROR")
+    E("ERROR")
     ;
 
     private String desc;

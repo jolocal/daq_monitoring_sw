@@ -57,13 +57,14 @@ public class ChannelManager {
         return Optional.empty();
     }
 
-    public void updateDaqName(Channel channel, String daqName) {
+    public void updateDaqId(Channel channel, String daqId) {
         Client client = clientInfoMap.get(channel.id());
+        
         if (client != null) {
             log.info("클라이언트 정보 찾음 - Channel ID: {}, Client: {}", channel.id(), client);
-            client.setDaqName(daqName);
-            daqToChannelIdMap.put(daqName, channel.id());
-            log.debug("클라이언트 DAQ 이름 설정 및 daqToChannelIdMap 값 추가 - DaqName: {}", daqName);
+            client.setDeviceId(daqId);
+            daqToChannelIdMap.put(daqId, channel.id());
+            log.debug("클라이언트 DAQ 이름 설정 및 daqToChannelIdMap 값 추가 - DaqName: {}", daqId);
         } else {
             log.warn("클라이언트를 찾을 수 없음 - Channel ID: {}", channel.id());
         }

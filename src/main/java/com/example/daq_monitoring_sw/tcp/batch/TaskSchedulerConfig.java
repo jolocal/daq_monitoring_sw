@@ -1,12 +1,12 @@
-//package com.example.daq_monitoring_sw.tcp.batch;
-//
-//import org.springframework.context.annotation.Bean;
-//import org.springframework.context.annotation.Configuration;
-//import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-//
-//@Configuration
-//public class TaskSchedulerConfig {
-//
+// package com.example.daq_monitoring_sw.tcp.batch;
+
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+
+// @Configuration
+// public class TaskSchedulerConfig {
+
 //    @Bean
 //    public ThreadPoolTaskScheduler threadPoolTaskScheduler() {
 //        ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
@@ -15,4 +15,4 @@
 //        taskScheduler.initialize();
 //        return taskScheduler;
 //    }
-//}
+// }
