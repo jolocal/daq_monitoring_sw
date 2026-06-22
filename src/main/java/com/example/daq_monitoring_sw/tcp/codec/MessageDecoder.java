@@ -51,12 +51,7 @@ public class MessageDecoder extends ReplayingDecoder<ProtocolState> {
         
         Client client = channelManager.getClientInfo(ctx.channel());
 
-        // [임시 디버깅] 수신된 가공되지 않은 원시 바이트 패킷을 INFO 로그로 강제 출력
-        if (in.readableBytes() > 0) {
-            byte[] rawBytes = new byte[in.readableBytes()];
-            in.getBytes(in.readerIndex(), rawBytes);
-            log.info("  ▷ [RAW PACKET] 수신된 원시 데이터: [{}]", new String(rawBytes, java.nio.charset.StandardCharsets.UTF_8));
-        }
+
         
         try {
             switch (state()) {

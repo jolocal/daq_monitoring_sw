@@ -27,8 +27,8 @@ public class NettyChannelInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
 
-        // logging - 원시 바이트 패킷 로깅을 위해 주석 해제
-        pipeline.addLast(new LoggingHandler(LogLevel.DEBUG));
+        // logging - 원시 바이트 패킷 로깅을 위해 주석 해제 (INFO 레벨로 변경하여 운영 환경에서도 노출)
+        pipeline.addLast(new LoggingHandler(LogLevel.INFO));
         // channel 관리 - 활성화/비활성화 및 예외 처리
         pipeline.addLast("channelManagerHandler", connectionHandler);
         // codec
