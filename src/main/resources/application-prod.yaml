@@ -8,6 +8,10 @@ spring:
     username: dactech
     password: qwer1234!  # STEP 2에서 설정한 비밀번호로 변경
 
+  batch:
+    jdbc:
+      initialize-schema: always  # 운영 환경에서도 배치 메타 테이블이 없을 경우 자동 생성하도록 설정
+
   jpa:
     hibernate:
       ddl-auto: update  # 첫 배포 시 테이블 자동 생성 (이후 validate로 변경 권장)
