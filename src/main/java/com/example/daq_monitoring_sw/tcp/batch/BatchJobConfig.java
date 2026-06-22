@@ -24,7 +24,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 
 @Configuration
-@EnableBatchProcessing
+// @EnableBatchProcessing
 @RequiredArgsConstructor
 @Slf4j
 public class BatchJobConfig {
