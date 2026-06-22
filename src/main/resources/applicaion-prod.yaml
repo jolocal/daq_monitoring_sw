@@ -1,0 +1,9 @@
+netty:
+  port: 1433  # DAQ 장비가 접속할 Netty TCP 포트
+
+spring:
+  datasource:
+    # DB가 EC2 내부에 있으므로 127.0.0.1 (localhost) 사용
+    url: jdbc:mysql://127.0.0.1:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: dactech
+    password: qwer1234!  # STEP 2에서 설정한 비밀번호로 변경

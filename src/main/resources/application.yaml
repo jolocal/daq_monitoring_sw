@@ -1,21 +1,7 @@
-netty:
-  port: 1433   # local
-  # port: 1715 # aws
-
-  boss-count: 1    # Netty boss 쓰레드 개수
-  worker-count: 4  # Netty worker 쓰레드 개수
-  keep-alive: true # TCP keep-alive 설정
-  backlog: 100     # TCP backlog 설정
-
-logging:
-  level:
-    root: INFO
-    com.example.daq_monitoring_sw: DEBUG # 애플리케이션 패키지 로그 레벨 설정
-    io.netty: DEBUG
-    org.springframework: INFO # Spring 관련 로그 레벨 설정
-
-
 spring:
+  profiles:
+    active: local # 기본으로 local 환경을 실행하도록 지정
+
   batch:
     jdbc:
       initialize-schema: always
@@ -24,17 +10,6 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-#   local
-    url: jdbc:mysql://192.168.0.75:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: dactech
-    password: 9531
-
-# #    aws
-#     url: jdbc:mysql://15.165.111.153:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-#     username: daq
-#     password: 9531
-
-
     hikari:
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
@@ -46,11 +21,23 @@ spring:
         storage_engine: innodb
         format_sql: false
         use_sql_comments: false
-
     hibernate:
       ddl-auto: validate # validate: 데이터베이스 스키마 검증, create: 데이터베이스 스키마 생성, update: 데이터베이스 스키마 업데이트, none: 데이터베이스 스키마 변경 없음
     open-in-view: true
     show_sql: false
+
+  netty:
+    boss-count: 1    # Netty boss 쓰레드 개수
+    worker-count: 4  # Netty worker 쓰레드 개수
+    keep-alive: true # TCP keep-alive 설정
+    backlog: 100     # TCP backlog 설정
+
+  logging:
+    level:
+      root: INFO
+      com.example.daq_monitoring_sw: DEBUG
+      io.netty: DEBUG
+      org.springframework: INFO 
 
 server:
   port: 9531

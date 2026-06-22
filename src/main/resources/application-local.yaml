@@ -1,0 +1,9 @@
+netty:
+  port: 1433  # 로컬 통신 포트
+
+spring:
+  datasource:
+    # 내 PC 또는 기존에 사용하던 로컬 DB IP
+    url: jdbc:mysql://192.168.0.80:3306/daqcenter?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: dactech
+    password: 9531
