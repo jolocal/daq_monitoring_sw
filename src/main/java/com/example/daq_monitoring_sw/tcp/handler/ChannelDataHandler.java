@@ -87,7 +87,7 @@ public class ChannelDataHandler extends SimpleChannelInboundHandler<ProtocolMess
                 sendResponse(ctx, response);
                 //ctx.writeAndFlush(response);
             });
-
+        // 
         }
         
         if (deviceType.equals("D") || deviceType.equals("T")){
